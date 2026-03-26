@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "533282229734",
+    "project_id": "restoranuygulamasi-f5c17",
+    "storage_bucket": "restoranuygulamasi-f5c17.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:533282229734:android:b150eac22637b34d00da27",
+        "android_client_info": {
+          "package_name": "com.restoran.restoranuygulamasi"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBA35wuAj8ntV9xD_cnsq1bNYGAXWMhnfg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
