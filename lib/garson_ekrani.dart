@@ -1,12 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:restoranuygulamasi/services/auth_servis.dart';
 import 'package:restoranuygulamasi/services/menu_servis_database.dart';
 import 'services/database_service.dart';
 import 'siparis_ekrani.dart';
 import 'services/menu_servis_database.dart';
 
+
 class GarsonEkrani extends StatelessWidget {
-  const GarsonEkrani({super.key});
+  final String personelAdi;
+  const GarsonEkrani({super.key,required this.personelAdi});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +27,14 @@ class GarsonEkrani extends StatelessWidget {
         ),
         centerTitle: true,
         backgroundColor: Colors.brown.shade200,
-       /* actions: [
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () => AuthServis.isimliCikisYap(context,personelAdi),
+          ),
+        ],
+
+        /* actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () async {
@@ -60,7 +70,7 @@ class GarsonEkrani extends StatelessWidget {
 
           return GridView.builder(
             padding: const EdgeInsets.all(10),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(//ızgaranın kaç sürun oalcağını belirler
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
               crossAxisSpacing: 10,
               mainAxisSpacing: 10,
@@ -70,7 +80,7 @@ class GarsonEkrani extends StatelessWidget {
             itemBuilder: (context, index) {
               var masaVerisi = masalar[index].data() as Map<String, dynamic>;
               var masaId = masalar[index].id;
-             // bool doluMu = masaVerisi['durum'] == "dolu";
+              // bool doluMu = masaVerisi['durum'] == "dolu";
 
 
               return GestureDetector(
@@ -78,7 +88,10 @@ class GarsonEkrani extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => SiparisEkrani(masaId: masaId),
+                      builder: (context) => SiparisEkrani(
+                        masaId: masaId,
+                        garsonAdi: personelAdi,
+                      ),
                     ),
                   );
                 },
@@ -97,7 +110,6 @@ class GarsonEkrani extends StatelessWidget {
                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        //doluMu ? "DOLU" : "BOŞ",
                         masaKontrol(masaVerisi['durum']),
                         style: const TextStyle(color: Colors.white70, fontSize: 12),
                       ),
@@ -115,15 +127,15 @@ class GarsonEkrani extends StatelessWidget {
 String masaKontrol(String durum)
 {
   if(durum=='SiparisAlindi')
-   { return "Sipariş alındı";}
+  { return "Sipariş alındı";}
   else if(durum=='bos')
   {  return "Bos";}
   else if(durum=='ödendi')
-    {return "Bos";}
+  {return "Bos";}
   else if(durum=='hazirlaniyor')
-   { return "Hazırlanıyor";}
+  { return "Hazırlanıyor";}
   else if (durum=='hazir');
-      {return "Dolu";}
+  {return "Dolu";}
 
 }
 Color masaRengiGetir(String durum)
@@ -137,5 +149,5 @@ Color masaRengiGetir(String durum)
   else if(durum=='hazirlaniyor')
     return Colors.orange[300]!;
   else (durum=='hazir');
-     return Colors.red[300]!;
+  return Colors.red[300]!;
 }

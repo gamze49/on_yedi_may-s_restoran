@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:restoranuygulamasi/services/auth_servis.dart';
 
 class MutfakEkrani extends StatelessWidget {
-  const MutfakEkrani({super.key});
+  final String personelAdi;
+  const MutfakEkrani({super.key,required this.personelAdi});
 
   @override
   Widget build(BuildContext context) {
@@ -10,9 +12,9 @@ class MutfakEkrani extends StatelessWidget {
       body: Column(
         children: [
 
-          _header(),
+          _header(context),
 
-          Expanded(//ekran taşmamı önlüyor
+          Expanded(
             child: Container(
               color: Colors.grey.shade100,
               child: _siparisler(),
@@ -23,25 +25,23 @@ class MutfakEkrani extends StatelessWidget {
     );
   }
 
-  Widget _header() {
-    return Stack(//sandviç gibi kat kat yapıyor
-      children: [
 
+  Widget _header(BuildContext context) {
+    return Stack(
+      children: [
         SizedBox(
           height: 130,
-          width: double.infinity,//resmin ekranın tüm genişliğine yayılmasını sağlar
+          width: double.infinity,
           child: Image.asset(
             "assets/images/restoran.jpg",
-            fit: BoxFit.cover,//resmi bozmuyor
+            fit: BoxFit.cover,
           ),
         ),
-
         Container(
           height: 130,
-          color: Colors.black54,//resmin üzerine şeffaf siyah bir perde ekledim
+          color: Colors.black54,
         ),
-
-        const SafeArea(//saat kısmı yazımı engellemesin istiyorum
+        const SafeArea(
           child: Center(
             child: Text(
               "MUTFAK EKRANI",
@@ -51,6 +51,15 @@ class MutfakEkrani extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
+          ),
+        ),
+
+        Positioned(
+          top: 45,
+          right: 15,
+          child: IconButton(
+            icon: const Icon(Icons.power_settings_new, color: Colors.white, size: 28),
+            onPressed: () => AuthServis.isimliCikisYap(context,personelAdi),
           ),
         ),
       ],
@@ -65,17 +74,17 @@ class MutfakEkrani extends StatelessWidget {
         "SiparisAlindi",
         "hazirlaniyor"
       ])
-          .snapshots(),//veriyi anlık takibe alır
+          .snapshots(),
 
       builder: (context, snapshot) {
 
         if (!snapshot.hasData) {
           return const Center(
-            child: CircularProgressIndicator(),//internet yavaş geliyorsa bu döner
+            child: CircularProgressIndicator(),
           );
         }
 
-        var siparisler = snapshot.data!.docs;//gelen tüm dokümanları listeye atıyourm
+        var siparisler = snapshot.data!.docs;
 
         if (siparisler.isEmpty) {
           return const Center(
@@ -83,7 +92,7 @@ class MutfakEkrani extends StatelessWidget {
           );
         }
 
-        double w = MediaQuery.of(context).size.width;//burada ekran büyüklüğüne göre kutularım yerleşsin
+        double w = MediaQuery.of(context).size.width;
 
         int yan_yana_kutu = 2;
 
@@ -98,9 +107,9 @@ class MutfakEkrani extends StatelessWidget {
 
             crossAxisCount: yan_yana_kutu,
 
-            childAspectRatio: 0.85,//kutuların en/boy oranı
+            childAspectRatio: 0.85,
 
-            crossAxisSpacing: 10,//kutular arsındaki boşluk
+            crossAxisSpacing: 10,
             mainAxisSpacing: 10,
           ),
 
@@ -145,7 +154,7 @@ class MutfakEkrani extends StatelessWidget {
         color: Colors.white,
 
         boxShadow: [
-          BoxShadow(//kutumun gölgesi
+          BoxShadow(
             color: Colors.black12,
             blurRadius: 6,
           )
@@ -155,10 +164,10 @@ class MutfakEkrani extends StatelessWidget {
       padding: const EdgeInsets.all(8),
 
       child: Column(
-        crossAxisAlignment:CrossAxisAlignment.start,//sola yaslanmasın diye
+        crossAxisAlignment:CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,//yazılar arasındaki mesafeyi max yapar
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 "Masa $masaNo",
@@ -189,7 +198,7 @@ class MutfakEkrani extends StatelessWidget {
             ],
           ),
 
-          const Divider(),//ince yatay çicgiyi oluşturur
+          const Divider(),
           Expanded(
             child: SingleChildScrollView(
               child: Column(

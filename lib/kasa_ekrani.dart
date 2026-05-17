@@ -1,33 +1,30 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:restoranuygulamasi/services/auth_servis.dart';
 
 class KasaEkrani extends StatelessWidget {
-  const KasaEkrani({super.key});
+  final String personelAdi;
+  const KasaEkrani({super.key,required this.personelAdi});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Column(
         children: [
-
-          _header(),
-
+          _header(context),
           Expanded(
-            child: Container(
-              color: Colors.grey.shade100,
-              child: _masalar(),
-            ),
+            child: _modernMasalar(),
           ),
         ],
       ),
     );
   }
 
-
-  Widget _header() {
+  Widget _header(BuildContext context) {
     return Stack(
       children: [
-
         SizedBox(
           height: 130,
           width: double.infinity,
@@ -36,12 +33,10 @@ class KasaEkrani extends StatelessWidget {
             fit: BoxFit.cover,
           ),
         ),
-
         Container(
           height: 130,
           color: Colors.black54,
         ),
-
         const SafeArea(
           child: Center(
             child: Text(
@@ -54,69 +49,185 @@ class KasaEkrani extends StatelessWidget {
             ),
           ),
         ),
+        Positioned(
+          top: 45,
+          right: 15,
+          child: IconButton(
+            icon: const Icon(Icons.power_settings_new, color: Colors.white, size: 28),
+            onPressed: () => AuthServis.isimliCikisYap(context,personelAdi),
+          ),
+        ),
       ],
     );
   }
 
-
-  Widget _masalar() {
+  Widget _modernMasalar() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection("masalar")
-          .where("durum", isEqualTo: "hazir")
-          .orderBy("masaNo")
+          .where("durum", isNotEqualTo: "bos")
           .snapshots(),
-
       builder: (context, snapshot) {
-
-        if (snapshot.hasError) {
-          return Center(
-            child: Text("HATA: ${snapshot.error}"),
-          );
-        }
-
-        if (!snapshot.hasData) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        }
+        if (snapshot.hasError) return Center(child: Text("HATA: ${snapshot.error}"));
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
         var masalar = snapshot.data!.docs;
-
         if (masalar.isEmpty) {
           return const Center(
-            child: Text("Ödeme bekleyen masa yok"),
+            child: Text("Ödeme bekleyen masa yok", style: TextStyle(color: Colors.grey)),
           );
         }
 
-        double w = MediaQuery.of(context).size.width;
-
-        int yan = 2;
-        if (w > 100) yan = 3;
-        if (w > 500) yan = 4;
-
         return GridView.builder(
-          padding: const EdgeInsets.all(10),
-
-          gridDelegate:
-          SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: yan,
-            childAspectRatio: 1,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
+          padding: const EdgeInsets.all(20),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 1.1,
+            crossAxisSpacing: 20,
+            mainAxisSpacing: 20,
           ),
-
           itemCount: masalar.length,
-
           itemBuilder: (context, i) {
-
             var masa = masalar[i];
             var data = masa.data() as Map<String, dynamic>;
+            return _modernMasaCard(context, masa.id, data["masaNo"]);
+          },
+        );
+      },
+    );
+  }
 
-            return _masaCard(
-              context,
-              masa.id,
-              data["masaNo"],
+  Widget _modernMasaCard(BuildContext context, String id, int masaNo) {
+    return GestureDetector(
+      onTap: () => _detayDialog(context, masaNo),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            )
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.brown.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.table_restaurant_rounded, color: Colors.brown.shade400, size: 35),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "MASA $masaNo",
+              style: const TextStyle(
+                color: Color(0xFF3E2723),
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 5),
+            const Text(
+              "Ödeme Bekliyor",
+              style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _detayDialog(BuildContext context, int masaNo) {
+    String girilenMiktar = "";
+    String secilenOdemeYontemi = "Nakit";
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              insetPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection("siparisler")
+                    .where("masaNo", isEqualTo: masaNo.toString().padLeft(2, '0'))
+                    .where("durum", isNotEqualTo: "odendi")
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+
+                  var siparisler = snapshot.data!.docs;
+                  double araToplam = 0;
+                  List tumUrunler = [];
+                  for (var s in siparisler) {
+                    var d = s.data() as Map<String, dynamic>;
+                    araToplam += (d["toplam"] ?? 0);
+                    tumUrunler.addAll(d["urunler"]);
+                  }
+
+                  double kdv = araToplam * 0.10;
+                  double genelToplam = araToplam + kdv;
+                  double alinanNakit = double.tryParse(girilenMiktar) ?? 0;
+                  double paraUstu = alinanNakit > genelToplam ? alinanNakit - genelToplam : 0;
+
+                  return Container(
+                    padding: const EdgeInsets.all(20),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text("MASA $masaNo ÖDEME", style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                          const Divider(),
+                          _ozetKarti(araToplam, kdv, genelToplam),
+                          const SizedBox(height: 20),
+                          Row(
+                            children: [
+                              _odemeTipiButon("Nakit", Icons.money, secilenOdemeYontemi == "Nakit", () => setState(() => secilenOdemeYontemi = "Nakit")),
+                              const SizedBox(width: 10),
+                              _odemeTipiButon("Kredi Kartı", Icons.credit_card, secilenOdemeYontemi == "Kredi Kartı", () => setState(() => secilenOdemeYontemi = "Kredi Kartı")),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          _miktarGostergesi(girilenMiktar, paraUstu),
+                          const SizedBox(height: 20),
+                          _tusTakimi((deger) {
+                            setState(() {
+                              if (deger == "C") {
+                                girilenMiktar = "";
+                              } else if (deger == "⌫") {
+                                if (girilenMiktar.isNotEmpty) girilenMiktar = girilenMiktar.substring(0, girilenMiktar.length - 1);
+                              } else {
+                                girilenMiktar += deger;
+                              }
+                            });
+                          }),
+                          const SizedBox(height: 20),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green.shade700,
+                              minimumSize: const Size(double.infinity, 60),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                            ),
+                            onPressed: () async {
+                              await _odemeTamamla(masaNo, genelToplam, tumUrunler, siparisler, secilenOdemeYontemi);
+                              Navigator.pop(context);
+                            },
+                            child: const Text("İŞLEMİ ONAYLA", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
             );
           },
         );
@@ -124,206 +235,151 @@ class KasaEkrani extends StatelessWidget {
     );
   }
 
-  Widget _masaCard(
-      BuildContext context,
-      String id,
-      int masaNo,
-      ) {
+  Widget _ozetKarti(double ara, double kdv, double toplam) {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(15)),
+      child: Column(
+        children: [
+          _ozetSatiri("Ara Toplam", "₺${ara.toStringAsFixed(2)}"),
+          _ozetSatiri("KDV (%10)", "₺${kdv.toStringAsFixed(2)}"),
+          const Divider(),
+          _ozetSatiri("Toplam Tutar", "₺${toplam.toStringAsFixed(2)}", bold: true),
+        ],
+      ),
+    );
+  }
 
-    return GestureDetector(
+  Widget _ozetSatiri(String baslik, String deger, {bool bold = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(baslik, style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
+          Text(deger, style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal, fontSize: bold ? 16 : 14)),
+        ],
+      ),
+    );
+  }
 
-      onTap: () {
-        _detayDialog(context, masaNo);
-      },
-
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.brown.shade300,
-          borderRadius: BorderRadius.circular(16),
-        ),
-
-        child: Center(
-          child: Text(
-            "MASA $masaNo",
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+  Widget _odemeTipiButon(String ad, IconData ikon, bool secili, VoidCallback onTap) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 15),
+          decoration: BoxDecoration(
+            color: secili ? Colors.brown : Colors.white,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.brown.shade200),
+          ),
+          child: Column(
+            children: [
+              Icon(ikon, color: secili ? Colors.white : Colors.brown),
+              Text(ad, style: TextStyle(color: secili ? Colors.white : Colors.brown, fontWeight: FontWeight.bold)),
+            ],
           ),
         ),
       ),
     );
   }
 
+  Widget _miktarGostergesi(String girilen, double paraUstu) {
+    return Row(
+      children: [
+        Expanded(
+          child: _bilgiKutusu("Alınan Nakit", girilen.isEmpty ? "0.00" : girilen, Colors.blue.shade700),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _bilgiKutusu("Para Üstü", "₺${paraUstu.toStringAsFixed(2)}", Colors.green.shade700),
+        ),
+      ],
+    );
+  }
 
-  void _detayDialog(
-      BuildContext context,
-      int masaNo,
-      ) {
+  Widget _bilgiKutusu(String baslik, String deger, Color renk) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+          color: renk.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: renk.withOpacity(0.3))),
+      child: Column(
+        children: [
+          Text(baslik, style: TextStyle(fontSize: 12, color: renk)),
+          Text(deger, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: renk)),
+        ],
+      ),
+    );
+  }
 
-    showDialog(
-      context: context,
-
-      builder: (context) {
-
-        return Dialog(
-
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection("siparisler")
-                .where("masaNo", isEqualTo: masaNo.toString().padLeft(2,'0'))
-                .where("durum", isEqualTo: "hazir")
-                .snapshots(),
-
-            builder: (context, snapshot) {
-
-              if (!snapshot.hasData) {
-                return const Padding(
-                  padding: EdgeInsets.all(20),
-                  child: CircularProgressIndicator(),
-                );
-              }
-
-              if (snapshot.data!.docs.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Text("Sipariş bulunamadı"),
-                );
-              }
-
-              var siparis = snapshot.data!.docs.first;
-
-              var data =
-              siparis.data()
-              as Map<String, dynamic>;
-
-              List urunler =
-              data["urunler"];
-
-              double toplam =
-              (data["toplam"] ?? 0).toDouble();
-
-              return Padding(
-                padding:
-                const EdgeInsets.all(12),
-
-                child: Column(
-                  mainAxisSize:
-                  MainAxisSize.min,
-
-                  children: [
-
-                    Text(
-                      "MASA $masaNo",
-                      style:
-                      const TextStyle(
-                        fontSize: 18,
-                        fontWeight:
-                        FontWeight.bold,
-                      ),
-                    ),
-
-                    const Divider(),
-
-                    Column(
-                      children:
-                      urunler.map<Widget>((u) {
-
-                        return Row(
-                          mainAxisAlignment:
-                          MainAxisAlignment
-                              .spaceBetween,
-
-                          children: [
-
-                            Text(u["ad"]),
-
-                            Text(
-                                "x${u["adet"]}"),
-                          ],
-                        );
-
-                      }).toList(),
-                    ),
-
-                    const SizedBox(
-                        height: 10),
-
-                    Text(
-                      "Toplam: $toplam TL",
-                      style:
-                      const TextStyle(
-                        fontSize: 18,
-                        fontWeight:
-                        FontWeight.bold,
-                      ),
-                    ),
-
-                    const SizedBox(
-                        height: 10),
-
-                    ElevatedButton(
-
-                      onPressed: () async {
-                        await FirebaseFirestore
-                            .instance
-                            .collection(
-                            "siparisler")
-                            .doc(
-                            siparis.id)
-                            .update({
-                          "durum":
-                          "odendi"
-                        });
-
-
-                        await FirebaseFirestore
-                            .instance
-                            .collection(
-                            "masalar")
-                            .doc(masaNo
-                            .toString()
-                            .padLeft(2, '0'))
-                            .update({
-                          "durum": "bos"
-                        });
-
-                        await FirebaseFirestore
-                            .instance
-                            .collection(
-                            "ciro")
-                            .add({
-                          "masaNo":
-                          masaNo,
-                          "toplam":
-                          toplam,
-                          "zaman":
-                          FieldValue
-                              .serverTimestamp(),
-                        });
-
-                        Navigator.pop(
-                            context);
-                      },
-
-                      style:
-                      ElevatedButton
-                          .styleFrom(
-                        backgroundColor:
-                        Colors.red,
-                      ),
-
-                      child: const Text(
-                          "ÖDEME AL"),
-                    ),
-                  ],
-                ),
-              );
-            },
+  Widget _tusTakimi(Function(String) onTapped) {
+    var tuslar = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "⌫"];
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: tuslar.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          childAspectRatio: 1.5,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8
+      ),
+      itemBuilder: (context, i) {
+        return ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: (tuslar[i] == "C" || tuslar[i] == "⌫")
+                ? Colors.red.shade50
+                : Colors.white,
+            foregroundColor: Colors.black,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: BorderSide(color: Colors.grey.shade300),
+            ),
+          ),
+          onPressed: () => onTapped(tuslar[i]),
+          child: Text(
+              tuslar[i],
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)
           ),
         );
       },
     );
+  }
+  Future<void> _odemeTamamla(int masaNo, double toplam, List urunler, List siparisler, String yontem) async {
+
+    String asilGarson = "Bilinmiyor";
+
+    if (siparisler.isNotEmpty) {
+      var siparisVerisi = siparisler.first.data() as Map<String, dynamic>;
+
+      asilGarson = siparisVerisi['garsonAdi'] ?? siparisVerisi['ad'] ?? "Bilinmiyor";
+    }
+
+
+    for (var s in siparisler) {
+      await FirebaseFirestore.instance.collection("siparisler").doc(s.id).update({
+        "durum": "odendi",
+        "odemeYontemi": yontem
+      });
+    }
+
+    await FirebaseFirestore.instance.collection("masalar").doc(masaNo.toString().padLeft(2, '0')).update({
+      "durum": "bos"
+    });
+
+
+    await FirebaseFirestore.instance.collection("ciro").add({
+      "masaNo": masaNo.toString(),
+      "toplam": toplam,
+      "odemeYontemi": yontem,
+      "tarih": FieldValue.serverTimestamp(),
+      "satilanUrunler": urunler.map((u) => u["ad"]).toList(),
+      "ad": asilGarson,
+      "role": "garson"
+    });
   }
 }

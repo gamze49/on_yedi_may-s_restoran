@@ -1,12 +1,13 @@
 import 'dart:ffi' hide Size;
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'admin_panel_ekrani.dart';
 import 'garson_ekrani.dart';
 import 'mutfak_ekrani.dart';
 import 'kasa_ekrani.dart';
+
 class GirisEkrani extends StatefulWidget {
   const GirisEkrani({super.key});
 
@@ -19,53 +20,63 @@ class _GirisEkraniState extends State<GirisEkrani> {
   final passwordController = TextEditingController();
 
   Future<void> login() async {
+    String email = emailController.text.trim();
+    String sifre = passwordController.text.trim();
+
+    if (email.isEmpty || sifre.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Lütfen tüm alanları doldurun")),
+      );
+      return;
+    }
+
     try {
-
-      UserCredential userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(
-            email: emailController.text.trim(),
-            password: passwordController.text.trim(),
-          );
-
-      String uid = userCredential.user!.uid;
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+      var sonuc = await FirebaseFirestore.instance
           .collection("kullanici")
-          .doc(uid)
+          .where("email", isEqualTo: email)
+          .where("sifre", isEqualTo: sifre)
           .get();
 
-      if (!userDoc.exists) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Firestore'da kullanıcı bulunamadı")),
-        );
-        return;
-      }
+      if (sonuc.docs.isNotEmpty) {
+        var veri = sonuc.docs.first.data();
+        String rol = veri['role'] ?? "";
+        String ad = veri['ad'] ?? "Personel";
 
-      String rol = userDoc.get("role");
-      if (rol == "garson") {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const GarsonEkrani()),
-        );
-      } else if (rol == "mutfak") {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MutfakEkrani()),
-        );
-      } else if (rol == "kasa") {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const KasaEkrani()),
-        );
-      } else if (rol == "admin") {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const YoneticiEkrani()),
+        if (rol == "garson") {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => GarsonEkrani(personelAdi: ad)),
+          );
+        } else if (rol == "mutfak") {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => MutfakEkrani(personelAdi: ad)),
+          );
+        } else if (rol == "kasa") {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) =>  KasaEkrani(personelAdi: ad)),
+          );
+        } else if (rol == "admin") {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => AdminPanelEkrani(personelAdi: ad)),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Tanımsız kullanıcı rolü!")),
+          );
+        }
+      } else {
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Hatalı e-posta veya şifre!")),
         );
       }
-    } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Giriş Hatası: ${e.message}")));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Giriş hatası oluştu: $e")),
+      );
     }
   }
 
@@ -76,7 +87,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            ClipPath(//istediğim şekli çizebiliyourm bununla
+            ClipPath(
               clipper: KavisKesici(),
               child: Container(
                 height: MediaQuery.of(context).size.height / 2,
@@ -87,42 +98,42 @@ class _GirisEkraniState extends State<GirisEkrani> {
                 ),
               ),
             ),
-            SizedBox(height: 15),
+            const SizedBox(height: 15),
             Padding(
-              padding: EdgeInsets.all(20.0),
+              padding: const EdgeInsets.all(20.0),
               child: Column(
                 children: [
-                  Text(
+                  const Text(
                     'KOLAY GELSİN 😊',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   TextFormField(
                     controller: emailController,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Email',
                       border: OutlineInputBorder(),
                     ),
                   ),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
                   TextFormField(
                     controller: passwordController,
                     obscureText: true,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Şifre',
                       border: OutlineInputBorder(),
                     ),
                   ),
-                  SizedBox(height: 30),
+                  const SizedBox(height: 30),
                   Container(
                     width: double.infinity,
                     height: 50,
-                    margin: EdgeInsets.symmetric(horizontal: 10),
+                    margin: const EdgeInsets.symmetric(horizontal: 10),
                     child: ElevatedButton(
                       onPressed: () {
                         login();
                       },
-                      child: Text(
+                      child: const Text(
                         'Giriş Yap',
                         style: TextStyle(color: Colors.red),
                       ),
@@ -138,37 +149,20 @@ class _GirisEkraniState extends State<GirisEkrani> {
   }
 }
 
-
-
-
-class YoneticiEkrani extends StatelessWidget {
-  const YoneticiEkrani({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Yönetici Paneli")),
-      body: const Center(child: Text("Yönetici Ekranı")),
-    );
-  }
-}
-
 class KavisKesici extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     var path = Path();
     path.lineTo(0, size.height - 50);
     var kontrolNoktasi = Offset(size.width / 2, size.height);
-    var bitisNoktasi = Offset(size.width, size.height -50);
-    path.quadraticBezierTo(//bulunduğum noktadan bitiş noktasıne eğilerek gittt!
-    kontrolNoktasi.dx, kontrolNoktasi.dy,
-    bitisNoktasi.dx, bitisNoktasi.dy
-    );
+    var bitisNoktasi = Offset(size.width, size.height - 50);
+    path.quadraticBezierTo(
+        kontrolNoktasi.dx, kontrolNoktasi.dy, bitisNoktasi.dx, bitisNoktasi.dy);
     path.lineTo(size.width, 0);
     path.close();
     return path;
   }
 
   @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;//bu clipper değişmeyecek tekrar çizmedemek
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
