@@ -16,6 +16,10 @@ class _AdminMenuEkraniState extends State<AdminMenuEkrani> {
   File? _secilenDosya;
   final ImagePicker _picker = ImagePicker();
 
+  // 1. Değişkenleri sınıfın en üstüne ekledim
+  String _secilenKategori = "Ana Yemek";
+  final List<String> _kategoriler = ["Salata", "Ana Yemek", "Çorbalar", "Tatlı", "İçecek"];
+
   Future<void> _resimSec() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
@@ -205,7 +209,7 @@ class _AdminMenuEkraniState extends State<AdminMenuEkrani> {
   void _yeniUrunEkleSheet(BuildContext context) {
     TextEditingController adController = TextEditingController();
     TextEditingController fiyatController = TextEditingController();
-    TextEditingController kategoriController = TextEditingController();
+    bool _kaydediliyor = false;
 
     showModalBottomSheet(
       context: context,
@@ -233,25 +237,65 @@ class _AdminMenuEkraniState extends State<AdminMenuEkrani> {
               ),
               TextField(controller: adController, decoration: const InputDecoration(labelText: "Ürün Adı")),
               TextField(controller: fiyatController, decoration: const InputDecoration(labelText: "Fiyat"), keyboardType: TextInputType.number),
-              TextField(controller: kategoriController, decoration: const InputDecoration(labelText: "Kategori")),
+
+              // 2. Dropdown yapısını ekledim
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                value: _secilenKategori,
+                decoration: const InputDecoration(
+                  labelText: "Kategori Seçin",
+                  border: OutlineInputBorder(),
+                ),
+                items: _kategoriler.map((String kategori) {
+                  return DropdownMenuItem<String>(
+                    value: kategori,
+                    child: Text(kategori),
+                  );
+                }).toList(),
+                onChanged: (String? yeniDeger) {
+                  setSheetState(() {
+                    _secilenKategori = yeniDeger!;
+                  });
+                },
+              ),
+
               const SizedBox(height: 20),
+
+              // 3. Kaydetme butonunu çoklu tıklamaya karşı korumalı hale getirdim
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.brown),
-                onPressed: () async {
-                  if (adController.text.isNotEmpty && _secilenDosya != null) {
-                    String indirilenUrl = await _resmiYukleVeUrlAl(_secilenDosya!);
-                    await FirebaseFirestore.instance.collection("menu").add({
-                      "ad": adController.text,
-                      "fiyat": int.parse(fiyatController.text),
-                      "kategori": kategoriController.text,
-                      "resimUrl": indirilenUrl,
-                      "aktif": true,
-                    });
-                    setState(() { _secilenDosya = null; });
-                    Navigator.pop(context);
+                onPressed: _kaydediliyor ? null : () async {
+                  if (adController.text.isNotEmpty && fiyatController.text.isNotEmpty && _secilenDosya != null) {
+                    setSheetState(() => _kaydediliyor = true);
+                    try {
+                      String indirilenUrl = await _resmiYukleVeUrlAl(_secilenDosya!);
+
+                      await FirebaseFirestore.instance.collection("menu").add({
+                        "ad": adController.text,
+                        "fiyat": int.tryParse(fiyatController.text) ?? 0,
+                        "kategori": _secilenKategori,
+                        "resimUrl": indirilenUrl,
+                        "aktif": true,
+                      });
+
+                      setState(() {
+                        _secilenDosya = null;
+                        adController.clear();
+                        fiyatController.clear();
+                      });
+
+                      if (mounted) Navigator.pop(context);
+                    } catch (e) {
+                      setSheetState(() => _kaydediliyor = false);
+                    }
                   }
                 },
-                child: const Text("KAYDET", style: TextStyle(color: Colors.white)),
+                child: _kaydediliyor
+                    ? const SizedBox(
+                  height: 20, width: 20,
+                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                )
+                    : const Text("KAYDET", style: TextStyle(color: Colors.white)),
               ),
               const SizedBox(height: 20),
             ],

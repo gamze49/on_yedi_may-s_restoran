@@ -4,10 +4,16 @@ import 'admin_menu_ekrani.dart';
 import 'ciro_ekrani.dart';
 import 'admin_masa_ekle_sil.dart';
 import 'admin_personel_ekrani.dart';
+import 'profil_ayarlari_ekrani.dart';
 
 class AdminPanelEkrani extends StatelessWidget {
   final String personelAdi;
-  const AdminPanelEkrani({super.key,required this.personelAdi});
+  final String userUid; // EKLENDİ
+  const AdminPanelEkrani({
+    super.key,
+    required this.personelAdi,
+    required this.userUid,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +25,6 @@ class AdminPanelEkrani extends StatelessWidget {
       backgroundColor: zeminRengi,
       body: CustomScrollView(
         slivers: [
-
           SliverAppBar(
             expandedHeight: 220.0,
             floating: false,
@@ -28,8 +33,22 @@ class AdminPanelEkrani extends StatelessWidget {
             elevation: 0,
             actions: [
               IconButton(
+                icon: const Icon(Icons.manage_accounts, color: Colors.white),
+                tooltip: "Hesap Ayarları",
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProfilAyarlariEkrani(
+                      userUid: userUid, // DÜZELTME: uid geçiriliyor
+                    ),
+                  ),
+                ),
+              ),
+              IconButton(
                 icon: const Icon(Icons.power_settings_new, color: Colors.white),
-                onPressed: () => AuthServis.isimliCikisYap(context,personelAdi),
+                tooltip: "Çıkış Yap",
+                onPressed: () =>
+                    AuthServis.isimliCikisYap(context, personelAdi),
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
@@ -50,7 +69,6 @@ class AdminPanelEkrani extends StatelessWidget {
                     "assets/images/restoran.jpg",
                     fit: BoxFit.cover,
                   ),
-
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -111,23 +129,35 @@ class AdminPanelEkrani extends StatelessWidget {
                 childAspectRatio: 1.3,
               ),
               delegate: SliverChildListSnapshotDelegate([
-                _premiumAdminCard(context, "MENÜ\nYÖNETİMİ", Icons.restaurant_menu_outlined, const AdminMenuEkrani(), anaKahve, koyuKahve),
-                _premiumAdminCard(context, "CİRO\nRAPORU", Icons.auto_graph_outlined, const CiroEkrani(), anaKahve, koyuKahve),
-                _premiumAdminCard(context, "MASA\nYÖNETİMİ", Icons.grid_view_rounded, const MasaYonetimEkrani(), anaKahve, koyuKahve),
-                _premiumAdminCard(context, "PERSONEL\nYÖNETİMİ", Icons.badge_outlined, PersonelYonetimSayfasi(), anaKahve, koyuKahve),
+                _premiumAdminCard(context, "MENÜ\nYÖNETİMİ",
+                    Icons.restaurant_menu_outlined,
+                    const AdminMenuEkrani(), anaKahve, koyuKahve),
+                _premiumAdminCard(context, "CİRO\nRAPORU",
+                    Icons.auto_graph_outlined,
+                    const CiroEkrani(), anaKahve, koyuKahve),
+                _premiumAdminCard(context, "MASA\nYÖNETİMİ",
+                    Icons.grid_view_rounded,
+                    const MasaYonetimEkrani(), anaKahve, koyuKahve),
+                _premiumAdminCard(context, "PERSONEL\nYÖNETİMİ",
+                    Icons.badge_outlined,
+                    const PersonelYonetimSayfasi(), anaKahve, koyuKahve),
               ]),
             ),
           ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 30)),
         ],
       ),
     );
   }
 
-  Widget _premiumAdminCard(BuildContext context, String baslik, IconData ikon, Widget? sayfa, Color anaKahve, Color koyuKahve) {
+  Widget _premiumAdminCard(BuildContext context, String baslik, IconData ikon,
+      Widget? sayfa, Color anaKahve, Color koyuKahve) {
     return GestureDetector(
       onTap: () {
         if (sayfa != null) {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => sayfa));
+          Navigator.push(
+              context, MaterialPageRoute(builder: (context) => sayfa));
         }
       },
       child: Container(
@@ -136,7 +166,10 @@ class AdminPanelEkrani extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
-            BoxShadow(color: koyuKahve.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+            BoxShadow(
+                color: koyuKahve.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4)),
           ],
         ),
         child: Column(
@@ -145,13 +178,18 @@ class AdminPanelEkrani extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: anaKahve.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(
+                  color: anaKahve.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10)),
               child: Icon(ikon, color: anaKahve, size: 24),
             ),
             const SizedBox(height: 12),
             Text(
               baslik,
-              style: TextStyle(color: koyuKahve, fontSize: 13, fontWeight: FontWeight.w900),
+              style: TextStyle(
+                  color: koyuKahve,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900),
             ),
           ],
         ),
@@ -162,14 +200,17 @@ class AdminPanelEkrani extends StatelessWidget {
 
 class SliverChildListSnapshotDelegate extends SliverChildDelegate {
   final List<Widget> children;
-  SliverChildListSnapshotDelegate(this.children);
+  const SliverChildListSnapshotDelegate(this.children);
+
   @override
   Widget? build(BuildContext context, int index) {
     if (index < 0 || index >= children.length) return null;
     return children[index];
   }
+
   @override
   int? get childCount => children.length;
+
   @override
   bool shouldRebuild(covariant SliverChildDelegate oldDelegate) => true;
 }

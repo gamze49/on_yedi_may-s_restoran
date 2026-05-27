@@ -1,6 +1,4 @@
-import 'dart:ffi' hide Size;
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'admin_panel_ekrani.dart';
@@ -38,29 +36,51 @@ class _GirisEkraniState extends State<GirisEkrani> {
           .get();
 
       if (sonuc.docs.isNotEmpty) {
-        var veri = sonuc.docs.first.data();
+        var doc = sonuc.docs.first;
+        var veri = doc.data();
         String rol = veri['role'] ?? "";
         String ad = veri['ad'] ?? "Personel";
+        String userUid = doc.id; // Firestore doküman ID'sini alıyoruz
 
         if (rol == "garson") {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => GarsonEkrani(personelAdi: ad)),
+            MaterialPageRoute(
+              builder: (_) => GarsonEkrani(
+                personelAdi: ad,
+                userUid: userUid,
+              ),
+            ),
           );
         } else if (rol == "mutfak") {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => MutfakEkrani(personelAdi: ad)),
+            MaterialPageRoute(
+              builder: (_) => MutfakEkrani(
+                personelAdi: ad,
+                userUid: userUid,
+              ),
+            ),
           );
         } else if (rol == "kasa") {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) =>  KasaEkrani(personelAdi: ad)),
+            MaterialPageRoute(
+              builder: (_) => KasaEkrani(
+                personelAdi: ad,
+                userUid: userUid,
+              ),
+            ),
           );
         } else if (rol == "admin") {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => AdminPanelEkrani(personelAdi: ad)),
+            MaterialPageRoute(
+              builder: (_) => AdminPanelEkrani(
+                personelAdi: ad,
+                userUid: userUid,
+              ),
+            ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -68,7 +88,6 @@ class _GirisEkraniState extends State<GirisEkrani> {
           );
         }
       } else {
-
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Hatalı e-posta veya şifre!")),
         );
@@ -89,7 +108,7 @@ class _GirisEkraniState extends State<GirisEkrani> {
           children: [
             ClipPath(
               clipper: KavisKesici(),
-              child: Container(
+              child: SizedBox(
                 height: MediaQuery.of(context).size.height / 2,
                 width: double.infinity,
                 child: Image.asset(
@@ -125,14 +144,11 @@ class _GirisEkraniState extends State<GirisEkrani> {
                     ),
                   ),
                   const SizedBox(height: 30),
-                  Container(
+                  SizedBox(
                     width: double.infinity,
                     height: 50,
-                    margin: const EdgeInsets.symmetric(horizontal: 10),
                     child: ElevatedButton(
-                      onPressed: () {
-                        login();
-                      },
+                      onPressed: login,
                       child: const Text(
                         'Giriş Yap',
                         style: TextStyle(color: Colors.red),

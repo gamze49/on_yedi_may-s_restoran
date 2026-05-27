@@ -1,11 +1,16 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:restoranuygulamasi/services/auth_servis.dart';
+import 'profil_ayarlari_ekrani.dart';
 
 class KasaEkrani extends StatelessWidget {
   final String personelAdi;
-  const KasaEkrani({super.key,required this.personelAdi});
+  final String userUid; // EKLENDİ
+  const KasaEkrani({
+    super.key,
+    required this.personelAdi,
+    required this.userUid,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -14,9 +19,7 @@ class KasaEkrani extends StatelessWidget {
       body: Column(
         children: [
           _header(context),
-          Expanded(
-            child: _modernMasalar(),
-          ),
+          Expanded(child: _modernMasalar(context)),
         ],
       ),
     );
@@ -33,10 +36,7 @@ class KasaEkrani extends StatelessWidget {
             fit: BoxFit.cover,
           ),
         ),
-        Container(
-          height: 130,
-          color: Colors.black54,
-        ),
+        Container(height: 130, color: Colors.black54),
         const SafeArea(
           child: Center(
             child: Text(
@@ -51,30 +51,56 @@ class KasaEkrani extends StatelessWidget {
         ),
         Positioned(
           top: 45,
+          left: 15,
+          child: IconButton(
+            icon: const Icon(Icons.manage_accounts,
+                color: Colors.white, size: 28),
+            tooltip: "Hesap Ayarları",
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProfilAyarlariEkrani(
+                  userUid: userUid, // DÜZELTME: userUid geçiriliyor
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 45,
           right: 15,
           child: IconButton(
-            icon: const Icon(Icons.power_settings_new, color: Colors.white, size: 28),
-            onPressed: () => AuthServis.isimliCikisYap(context,personelAdi),
+            icon: const Icon(Icons.power_settings_new,
+                color: Colors.white, size: 28),
+            tooltip: "Çıkış Yap",
+            onPressed: () =>
+                AuthServis.isimliCikisYap(context, personelAdi),
           ),
         ),
       ],
     );
   }
 
-  Widget _modernMasalar() {
+  Widget _modernMasalar(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection("masalar")
-          .where("durum", isNotEqualTo: "bos")
+          .where("durum",
+          whereIn: ["SiparisAlindi", "hazirlaniyor", "hazir", "dolu"])
           .snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.hasError) return Center(child: Text("HATA: ${snapshot.error}"));
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        if (snapshot.hasError) {
+          return Center(child: Text("HATA: ${snapshot.error}"));
+        }
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
         var masalar = snapshot.data!.docs;
         if (masalar.isEmpty) {
           return const Center(
-            child: Text("Ödeme bekleyen masa yok", style: TextStyle(color: Colors.grey)),
+            child: Text("Ödeme bekleyen masa yok",
+                style: TextStyle(color: Colors.grey)),
           );
         }
 
@@ -97,9 +123,10 @@ class KasaEkrani extends StatelessWidget {
     );
   }
 
-  Widget _modernMasaCard(BuildContext context, String id, int masaNo) {
+  Widget _modernMasaCard(
+      BuildContext context, String masaDocId, dynamic masaNo) {
     return GestureDetector(
-      onTap: () => _detayDialog(context, masaNo),
+      onTap: () => _detayDialog(context, masaDocId),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -121,11 +148,12 @@ class KasaEkrani extends StatelessWidget {
                 color: Colors.brown.shade50,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.table_restaurant_rounded, color: Colors.brown.shade400, size: 35),
+              child: Icon(Icons.table_restaurant_rounded,
+                  color: Colors.brown.shade400, size: 35),
             ),
             const SizedBox(height: 12),
             Text(
-              "MASA $masaNo",
+              "MASA $masaDocId",
               style: const TextStyle(
                 color: Color(0xFF3E2723),
                 fontSize: 18,
@@ -135,7 +163,10 @@ class KasaEkrani extends StatelessWidget {
             const SizedBox(height: 5),
             const Text(
               "Ödeme Bekliyor",
-              style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                  color: Colors.orange,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -143,7 +174,7 @@ class KasaEkrani extends StatelessWidget {
     );
   }
 
-  void _detayDialog(BuildContext context, int masaNo) {
+  void _detayDialog(BuildContext context, String masaDocId) {
     String girilenMiktar = "";
     String secilenOdemeYontemi = "Nakit";
 
@@ -153,30 +184,50 @@ class KasaEkrani extends StatelessWidget {
         return StatefulBuilder(
           builder: (context, setState) {
             return Dialog(
-              insetPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+              insetPadding:
+              const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25)),
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection("siparisler")
-                    .where("masaNo", isEqualTo: masaNo.toString().padLeft(2, '0'))
-                    .where("durum", isNotEqualTo: "odendi")
+                    .where("masaNo", isEqualTo: masaDocId)
+                    .where("durum", whereNotIn: ["odendi"])
                     .snapshots(),
                 builder: (context, snapshot) {
-                  if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                  if (!snapshot.hasData) {
+                    return const Center(
+                        child: CircularProgressIndicator());
+                  }
 
                   var siparisler = snapshot.data!.docs;
                   double araToplam = 0;
                   List tumUrunler = [];
+
                   for (var s in siparisler) {
                     var d = s.data() as Map<String, dynamic>;
-                    araToplam += (d["toplam"] ?? 0);
-                    tumUrunler.addAll(d["urunler"]);
+                    double tutar = 0;
+                    if (d["toplam_tutar"] != null) {
+                      tutar = (d["toplam_tutar"] as num).toDouble();
+                    } else if (d["toplamTutar"] != null) {
+                      tutar = (d["toplamTutar"] as num).toDouble();
+                    } else if (d["toplam"] != null) {
+                      tutar = (d["toplam"] as num).toDouble();
+                    }
+                    araToplam += tutar;
+
+                    if (d["urunler"] != null) {
+                      tumUrunler.addAll(d["urunler"]);
+                    }
                   }
 
                   double kdv = araToplam * 0.10;
                   double genelToplam = araToplam + kdv;
-                  double alinanNakit = double.tryParse(girilenMiktar) ?? 0;
-                  double paraUstu = alinanNakit > genelToplam ? alinanNakit - genelToplam : 0;
+                  double alinanNakit =
+                      double.tryParse(girilenMiktar) ?? 0;
+                  double paraUstu = alinanNakit > genelToplam
+                      ? alinanNakit - genelToplam
+                      : 0;
 
                   return Container(
                     padding: const EdgeInsets.all(20),
@@ -184,15 +235,70 @@ class KasaEkrani extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text("MASA $masaNo ÖDEME", style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                          Text("MASA $masaDocId ÖDEME",
+                              style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold)),
                           const Divider(),
+                          if (tumUrunler.isNotEmpty) ...[
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Column(
+                                crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                                children: [
+                                  const Text("SİPARİŞ DETAYI",
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                          color: Colors.brown)),
+                                  const SizedBox(height: 6),
+                                  ...tumUrunler.map((u) => Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 2),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                            "${u["ad"]} x${u["adet"]}",
+                                            style: const TextStyle(
+                                                fontSize: 13)),
+                                        Text(
+                                            "₺${((u["fiyat"] as num) * (u["adet"] as num)).toStringAsFixed(0)}",
+                                            style: const TextStyle(
+                                                fontSize: 13)),
+                                      ],
+                                    ),
+                                  )),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                           _ozetKarti(araToplam, kdv, genelToplam),
                           const SizedBox(height: 20),
                           Row(
                             children: [
-                              _odemeTipiButon("Nakit", Icons.money, secilenOdemeYontemi == "Nakit", () => setState(() => secilenOdemeYontemi = "Nakit")),
+                              _odemeTipiButon(
+                                "Nakit",
+                                Icons.money,
+                                secilenOdemeYontemi == "Nakit",
+                                    () => setState(
+                                        () => secilenOdemeYontemi = "Nakit"),
+                              ),
                               const SizedBox(width: 10),
-                              _odemeTipiButon("Kredi Kartı", Icons.credit_card, secilenOdemeYontemi == "Kredi Kartı", () => setState(() => secilenOdemeYontemi = "Kredi Kartı")),
+                              _odemeTipiButon(
+                                "Kredi Kartı",
+                                Icons.credit_card,
+                                secilenOdemeYontemi == "Kredi Kartı",
+                                    () => setState(() =>
+                                secilenOdemeYontemi = "Kredi Kartı"),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 20),
@@ -203,7 +309,10 @@ class KasaEkrani extends StatelessWidget {
                               if (deger == "C") {
                                 girilenMiktar = "";
                               } else if (deger == "⌫") {
-                                if (girilenMiktar.isNotEmpty) girilenMiktar = girilenMiktar.substring(0, girilenMiktar.length - 1);
+                                if (girilenMiktar.isNotEmpty) {
+                                  girilenMiktar = girilenMiktar.substring(
+                                      0, girilenMiktar.length - 1);
+                                }
                               } else {
                                 girilenMiktar += deger;
                               }
@@ -213,14 +322,29 @@ class KasaEkrani extends StatelessWidget {
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green.shade700,
-                              minimumSize: const Size(double.infinity, 60),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                              minimumSize:
+                              const Size(double.infinity, 60),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                  BorderRadius.circular(15)),
                             ),
                             onPressed: () async {
-                              await _odemeTamamla(masaNo, genelToplam, tumUrunler, siparisler, secilenOdemeYontemi);
-                              Navigator.pop(context);
+                              await _odemeTamamla(
+                                masaDocId,
+                                genelToplam,
+                                tumUrunler,
+                                siparisler,
+                                secilenOdemeYontemi,
+                              );
+                              if (context.mounted) Navigator.pop(context);
                             },
-                            child: const Text("İŞLEMİ ONAYLA", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                            child: const Text(
+                              "İŞLEMİ ONAYLA",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ],
                       ),
@@ -238,13 +362,16 @@ class KasaEkrani extends StatelessWidget {
   Widget _ozetKarti(double ara, double kdv, double toplam) {
     return Container(
       padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(15)),
+      decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(15)),
       child: Column(
         children: [
           _ozetSatiri("Ara Toplam", "₺${ara.toStringAsFixed(2)}"),
           _ozetSatiri("KDV (%10)", "₺${kdv.toStringAsFixed(2)}"),
           const Divider(),
-          _ozetSatiri("Toplam Tutar", "₺${toplam.toStringAsFixed(2)}", bold: true),
+          _ozetSatiri("Toplam Tutar", "₺${toplam.toStringAsFixed(2)}",
+              bold: true),
         ],
       ),
     );
@@ -256,14 +383,22 @@ class KasaEkrani extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(baslik, style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
-          Text(deger, style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal, fontSize: bold ? 16 : 14)),
+          Text(baslik,
+              style: TextStyle(
+                  fontWeight:
+                  bold ? FontWeight.bold : FontWeight.normal)),
+          Text(deger,
+              style: TextStyle(
+                  fontWeight:
+                  bold ? FontWeight.bold : FontWeight.normal,
+                  fontSize: bold ? 16 : 14)),
         ],
       ),
     );
   }
 
-  Widget _odemeTipiButon(String ad, IconData ikon, bool secili, VoidCallback onTap) {
+  Widget _odemeTipiButon(
+      String ad, IconData ikon, bool secili, VoidCallback onTap) {
     return Expanded(
       child: InkWell(
         onTap: onTap,
@@ -276,8 +411,12 @@ class KasaEkrani extends StatelessWidget {
           ),
           child: Column(
             children: [
-              Icon(ikon, color: secili ? Colors.white : Colors.brown),
-              Text(ad, style: TextStyle(color: secili ? Colors.white : Colors.brown, fontWeight: FontWeight.bold)),
+              Icon(ikon,
+                  color: secili ? Colors.white : Colors.brown),
+              Text(ad,
+                  style: TextStyle(
+                      color: secili ? Colors.white : Colors.brown,
+                      fontWeight: FontWeight.bold)),
             ],
           ),
         ),
@@ -289,11 +428,13 @@ class KasaEkrani extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _bilgiKutusu("Alınan Nakit", girilen.isEmpty ? "0.00" : girilen, Colors.blue.shade700),
+          child: _bilgiKutusu("Alınan Nakit",
+              girilen.isEmpty ? "0.00" : girilen, Colors.blue.shade700),
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: _bilgiKutusu("Para Üstü", "₺${paraUstu.toStringAsFixed(2)}", Colors.green.shade700),
+          child: _bilgiKutusu("Para Üstü",
+              "₺${paraUstu.toStringAsFixed(2)}", Colors.green.shade700),
         ),
       ],
     );
@@ -303,20 +444,31 @@ class KasaEkrani extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-          color: renk.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: renk.withOpacity(0.3))),
+        color: renk.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: renk.withOpacity(0.3)),
+      ),
       child: Column(
         children: [
-          Text(baslik, style: TextStyle(fontSize: 12, color: renk)),
-          Text(deger, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: renk)),
+          Text(baslik,
+              style: TextStyle(fontSize: 12, color: renk)),
+          Text(deger,
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: renk)),
         ],
       ),
     );
   }
 
   Widget _tusTakimi(Function(String) onTapped) {
-    var tuslar = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "⌫"];
+    var tuslar = [
+      "1", "2", "3",
+      "4", "5", "6",
+      "7", "8", "9",
+      "C", "0", "⌫"
+    ];
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -325,12 +477,12 @@ class KasaEkrani extends StatelessWidget {
           crossAxisCount: 3,
           childAspectRatio: 1.5,
           crossAxisSpacing: 8,
-          mainAxisSpacing: 8
-      ),
+          mainAxisSpacing: 8),
       itemBuilder: (context, i) {
         return ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: (tuslar[i] == "C" || tuslar[i] == "⌫")
+            backgroundColor:
+            (tuslar[i] == "C" || tuslar[i] == "⌫")
                 ? Colors.red.shade50
                 : Colors.white,
             foregroundColor: Colors.black,
@@ -341,45 +493,62 @@ class KasaEkrani extends StatelessWidget {
             ),
           ),
           onPressed: () => onTapped(tuslar[i]),
-          child: Text(
-              tuslar[i],
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)
-          ),
+          child: Text(tuslar[i],
+              style: const TextStyle(
+                  fontSize: 20, fontWeight: FontWeight.bold)),
         );
       },
     );
   }
-  Future<void> _odemeTamamla(int masaNo, double toplam, List urunler, List siparisler, String yontem) async {
 
+  Future<void> _odemeTamamla(
+      String masaDocId,
+      double toplam,
+      List tumUrunler,
+      List siparisler,
+      String yontem,
+      ) async {
     String asilGarson = "Bilinmiyor";
-
     if (siparisler.isNotEmpty) {
-      var siparisVerisi = siparisler.first.data() as Map<String, dynamic>;
-
-      asilGarson = siparisVerisi['garsonAdi'] ?? siparisVerisi['ad'] ?? "Bilinmiyor";
+      var siparisVerisi =
+      siparisler.first.data() as Map<String, dynamic>;
+      asilGarson = siparisVerisi['garsonAdi'] ??
+          siparisVerisi['garson'] ??
+          siparisVerisi['ad'] ??
+          "Bilinmiyor";
     }
 
-
+    // Tüm siparişleri "odendi" yap
     for (var s in siparisler) {
-      await FirebaseFirestore.instance.collection("siparisler").doc(s.id).update({
+      await FirebaseFirestore.instance
+          .collection("siparisler")
+          .doc(s.id)
+          .update({
         "durum": "odendi",
-        "odemeYontemi": yontem
+        "odemeYontemi": yontem,
+        "garsonAdi": asilGarson,
+        "toplam": toplam,
       });
     }
 
-    await FirebaseFirestore.instance.collection("masalar").doc(masaNo.toString().padLeft(2, '0')).update({
-      "durum": "bos"
-    });
+    // Masayı boşa al
+    await FirebaseFirestore.instance
+        .collection("masalar")
+        .doc(masaDocId)
+        .update({"durum": "bos"});
 
-
+    // Ciro koleksiyonuna kaydet
     await FirebaseFirestore.instance.collection("ciro").add({
-      "masaNo": masaNo.toString(),
+      "masaNo": masaDocId,
       "toplam": toplam,
+      "toplamTutar": toplam,
       "odemeYontemi": yontem,
       "tarih": FieldValue.serverTimestamp(),
-      "satilanUrunler": urunler.map((u) => u["ad"]).toList(),
+      "zaman": FieldValue.serverTimestamp(),
+      "satilanUrunler":
+      tumUrunler.map((u) => u["ad"]).toList(),
       "ad": asilGarson,
-      "role": "garson"
+      "role": "garson",
     });
   }
 }

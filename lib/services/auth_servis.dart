@@ -1,21 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../giris_ekrani.dart';
 
 class AuthServis {
+  // --- Çıkış Yapma ---
   static Future<void> isimliCikisYap(BuildContext context, String personelAdi) async {
-
     bool? eminMi = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Çıkış Yap"),
         content: Text("Sayın $personelAdi, hesabınızdan çıkış yapmak istediğinize emin misiniz?"),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Vazgeç"),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Vazgeç")),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(context, true),
@@ -26,34 +22,62 @@ class AuthServis {
     );
 
     if (eminMi == true) {
-      try {
-        if (context.mounted) {
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Güle güle $personelAdi, çıkış yapılıyor..."),
-              backgroundColor: Colors.brown,
-              duration: const Duration(milliseconds: 800),
-            ),
-          );
-        }
-
-
-        await Future.delayed(const Duration(milliseconds: 500));
-
-
-        await FirebaseAuth.instance.signOut();
-
-        if (context.mounted) {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const GirisEkrani()),
-                (route) => false,
-          );
-        }
-      } catch (e) {
-        debugPrint("Çıkış hatası: $e");
+      if (context.mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const GirisEkrani()),
+              (route) => false,
+        );
       }
     }
+  }
+
+  // --- YENİ MİMARİ: SADECE FIRESTORE KULLANARAK ŞİFRE DOĞRULAMA ---
+  static Future<void> _firestoreSifreDogrula(String docId, String girilenSifre) async {
+    DocumentSnapshot userDoc = await FirebaseFirestore.instance
+        .collection("kullanici")
+        .doc(docId)
+        .get();
+
+    if (!userDoc.exists) {
+      throw Exception("Kullanıcı veri tabanında bulunamadı.");
+    }
+
+    String veriTabanindakiSifre = userDoc['sifre'] ?? "";
+    if (girilenSifre != veriTabanindakiSifre) {
+      throw Exception("Mevcut şifreniz hatalı! Değişiklik onaylanmadı.");
+    }
+  }
+
+  // --- SADECE FIRESTORE E-POSTA GÜNCELLEME ---
+  static Future<void> sadeceEpostaGuncelle({
+    required String userUid, // Profil ekranından gelen kullanıcının Firestore Doküman ID'si
+    required String mevcutSifre,
+    required String yeniEmail,
+  }) async {
+    // 1. Önce Firestore'dan mevcut şifreyi kontrol et
+    await _firestoreSifreDogrula(userUid, mevcutSifre);
+
+    // 2. Şifre doğruysa e-postayı doğrudan Firestore üzerinde güncelle
+    await FirebaseFirestore.instance
+        .collection("kullanici")
+        .doc(userUid)
+        .update({"email": yeniEmail});
+  }
+
+  // --- SADECE FIRESTORE ŞİFRE GÜNCELLEME ---
+  static Future<void> sadeceSifreGuncelle({
+    required String userUid, // Profil ekranından gelen kullanıcının Firestore Doküman ID'si
+    required String mevcutSifre,
+    required String yeniSifre,
+  }) async {
+    // 1. Önce Firestore'dan mevcut şifreyi kontrol et
+    await _firestoreSifreDogrula(userUid, mevcutSifre);
+
+    // 2. Şifre doğruysa şifreyi doğrudan Firestore üzerinde güncelle
+    await FirebaseFirestore.instance
+        .collection("kullanici")
+        .doc(userUid)
+        .update({"sifre": yeniSifre});
   }
 }

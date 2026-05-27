@@ -26,18 +26,18 @@ class _LogoEkraniState extends State<LogoEkrani> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9F6E5),
-     body: Column(
-       children: [
-         Expanded(child: Row(
-           children: [
-             Expanded(child: Image.asset(
-               'assets/images/restoranuygulamasi.png',
-             // fit: BoxFit.fill,
-             ))
-           ],
-         ))
-       ],
-     ),
+      body: Column(
+        children: [
+          Expanded(child: Row(
+            children: [
+              Expanded(child: Image.asset(
+                'assets/images/restoranuygulamasi.png',
+                // fit: BoxFit.fill,
+              ))
+            ],
+          ))
+        ],
+      ),
     );
   }
 }

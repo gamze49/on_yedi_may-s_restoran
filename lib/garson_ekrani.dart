@@ -1,15 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:restoranuygulamasi/services/auth_servis.dart';
-import 'package:restoranuygulamasi/services/menu_servis_database.dart';
-import 'services/database_service.dart';
 import 'siparis_ekrani.dart';
-import 'services/menu_servis_database.dart';
-
+import 'profil_ayarlari_ekrani.dart';
 
 class GarsonEkrani extends StatelessWidget {
   final String personelAdi;
-  const GarsonEkrani({super.key,required this.personelAdi});
+  final String userUid; // EKLENDİ
+  const GarsonEkrani({
+    super.key,
+    required this.personelAdi,
+    required this.userUid,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -29,39 +31,35 @@ class GarsonEkrani extends StatelessWidget {
         backgroundColor: Colors.brown.shade200,
         actions: [
           IconButton(
+            icon: const Icon(Icons.manage_accounts, color: Colors.white),
+            tooltip: "Hesap Ayarları",
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProfilAyarlariEkrani(
+                    userUid: userUid, // DÜZELTME: uid geçiriliyor
+                  ),
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () => AuthServis.isimliCikisYap(context,personelAdi),
+            tooltip: "Çıkış Yap",
+            onPressed: () => AuthServis.isimliCikisYap(context, personelAdi),
           ),
         ],
-
-        /* actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: () async {
-              await DatabaseService().ilkKurulumMasalariOlustur();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("40 Masa Başarıyla Kuruldu!")),
-              );
-            },
-          )
-        ],*/
-        /*actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: () async {
-              await MenuService().menuOlustur();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Menü oluştu!")),
-              );
-            },
-          )
-        ],*/
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('masalar').orderBy('masaNo').snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('masalar')
+            .orderBy('masaNo')
+            .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.hasError) return const Center(child: Text("Hata oluştu"));
-
+          if (snapshot.hasError) {
+            return const Center(child: Text("Hata oluştu"));
+          }
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -78,10 +76,9 @@ class GarsonEkrani extends StatelessWidget {
             ),
             itemCount: masalar.length,
             itemBuilder: (context, index) {
-              var masaVerisi = masalar[index].data() as Map<String, dynamic>;
+              var masaVerisi =
+              masalar[index].data() as Map<String, dynamic>;
               var masaId = masalar[index].id;
-              // bool doluMu = masaVerisi['durum'] == "dolu";
-
 
               return GestureDetector(
                 onTap: () {
@@ -96,22 +93,26 @@ class GarsonEkrani extends StatelessWidget {
                   );
                 },
                 child: Card(
-                  color: masaRengiGetir(masaVerisi['durum']),
-                  // masaVerisi['durum']=="dolu"? Colors.red[300] : Colors.green[300],
+                  color: masaRengiGetir(masaVerisi['durum'] ?? 'bos'),
                   elevation: 4,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15)),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.table_bar, size: 40, color: Colors.white),
+                      const Icon(Icons.table_bar,
+                          size: 40, color: Colors.white),
                       const SizedBox(height: 10),
                       Text(
-                        "Masa $masaId" ,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        "Masa $masaId",
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        masaKontrol(masaVerisi['durum']),
-                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                        masaKontrol(masaVerisi['durum'] ?? 'bos'),
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12),
                       ),
                     ],
                   ),
@@ -124,30 +125,21 @@ class GarsonEkrani extends StatelessWidget {
     );
   }
 }
-String masaKontrol(String durum)
-{
-  if(durum=='SiparisAlindi')
-  { return "Sipariş alındı";}
-  else if(durum=='bos')
-  {  return "Bos";}
-  else if(durum=='ödendi')
-  {return "Bos";}
-  else if(durum=='hazirlaniyor')
-  { return "Hazırlanıyor";}
-  else if (durum=='hazir');
-  {return "Dolu";}
 
+String masaKontrol(String durum) {
+  if (durum == 'SiparisAlindi') return "Sipariş alındı";
+  if (durum == 'bos') return "Boş";
+  if (durum == 'odendi') return "Boş";
+  if (durum == 'hazirlaniyor') return "Hazırlanıyor";
+  if (durum == 'hazir') return "Hazır";
+  return "Dolu";
 }
-Color masaRengiGetir(String durum)
-{
-  if(durum=='bos')
-    return Colors.brown.shade200!;
-  else if(durum=='SiparisAlindi')
-    return Colors.yellow[700]!;
-  else if(durum=='ödendi')
-    return Colors.brown.shade200!;
-  else if(durum=='hazirlaniyor')
-    return Colors.orange[300]!;
-  else (durum=='hazir');
+
+Color masaRengiGetir(String durum) {
+  if (durum == 'bos') return Colors.brown.shade200;
+  if (durum == 'SiparisAlindi') return Colors.yellow[700]!;
+  if (durum == 'odendi') return Colors.brown.shade200;
+  if (durum == 'hazirlaniyor') return Colors.blue[300]!;
+  if (durum == 'hazir') return Colors.green[400]!;
   return Colors.red[300]!;
 }
