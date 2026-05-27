@@ -16,7 +16,6 @@ class _AdminMenuEkraniState extends State<AdminMenuEkrani> {
   File? _secilenDosya;
   final ImagePicker _picker = ImagePicker();
 
-  // 1. Değişkenleri sınıfın en üstüne ekledim
   String _secilenKategori = "Ana Yemek";
   final List<String> _kategoriler = ["Salata", "Ana Yemek", "Çorbalar", "Tatlı", "İçecek"];
 
@@ -31,7 +30,10 @@ class _AdminMenuEkraniState extends State<AdminMenuEkrani> {
 
   Future<String> _resmiYukleVeUrlAl(File dosya) async {
     String dosyaAdi = DateTime.now().millisecondsSinceEpoch.toString();
-    Reference ref = FirebaseStorage.instance.ref().child("menu_resimleri").child("$dosyaAdi.jpg");
+    Reference ref = FirebaseStorage.instance
+        .ref()
+        .child("menu_resimleri")
+        .child("$dosyaAdi.jpg");
     UploadTask yuklemeGorevi = ref.putFile(dosya);
     TaskSnapshot snapshot = await yuklemeGorevi;
     return await snapshot.ref.getDownloadURL();
@@ -41,9 +43,10 @@ class _AdminMenuEkraniState extends State<AdminMenuEkrani> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: const Text("Menü Yönetimi"),
-          backgroundColor: Colors.brown,
-          foregroundColor: Colors.white),
+        title: const Text("Menü Yönetimi"),
+        backgroundColor: Colors.brown,
+        foregroundColor: Colors.white,
+      ),
       body: Column(
         children: [
           Padding(
@@ -52,7 +55,8 @@ class _AdminMenuEkraniState extends State<AdminMenuEkrani> {
               decoration: InputDecoration(
                 hintText: "Ürün ara...",
                 prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10)),
                 filled: true,
                 fillColor: Colors.grey[200],
               ),
@@ -78,7 +82,8 @@ class _AdminMenuEkraniState extends State<AdminMenuEkrani> {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection("menu").snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        if (!snapshot.hasData)
+          return const Center(child: CircularProgressIndicator());
 
         var urunDokumanlari = snapshot.data!.docs;
 
@@ -107,34 +112,106 @@ class _AdminMenuEkraniState extends State<AdminMenuEkrani> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(12.0),
-                  child: Text(kategoriAdi.toUpperCase(),
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.brown)),
+                  child: Text(
+                    kategoriAdi.toUpperCase(),
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.brown),
+                  ),
                 ),
                 ...gruplanmisUrunler[kategoriAdi]!.map((urunDoc) {
                   var data = urunDoc.data() as Map<String, dynamic>;
+
+                  // STOK BİLGİLERİ
+                  int stok = (data["stok"] ?? 0) is int
+                      ? (data["stok"] ?? 0)
+                      : (data["stok"] as num).toInt();
+                  bool stokTakibi = data["stokTakibiAktif"] ?? false;
+                  bool tukenmisMi = stokTakibi && stok <= 0;
+
                   return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    margin: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundImage: (data["resimUrl"] != null && data["resimUrl"] != "")
+                        backgroundImage: (data["resimUrl"] != null &&
+                            data["resimUrl"] != "")
                             ? NetworkImage(data["resimUrl"])
                             : null,
-                        child: (data["resimUrl"] == null || data["resimUrl"] == "")
+                        child: (data["resimUrl"] == null ||
+                            data["resimUrl"] == "")
                             ? const Icon(Icons.fastfood)
                             : null,
                       ),
                       title: Text(data["ad"] ?? "İsimsiz"),
-                      subtitle: Text("${data["fiyat"]} TL"),
+                      subtitle: Row(
+                        children: [
+                          Text("${data["fiyat"]} TL"),
+                          const SizedBox(width: 8),
+                          // STOK DURUMU ETIKETI
+                          if (stokTakibi)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: tukenmisMi
+                                    ? Colors.red.shade100
+                                    : Colors.green.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: tukenmisMi
+                                      ? Colors.red
+                                      : Colors.green,
+                                ),
+                              ),
+                              child: Text(
+                                tukenmisMi
+                                    ? "TÜKENDİ"
+                                    : "Stok: $stok",
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: tukenmisMi
+                                      ? Colors.red
+                                      : Colors.green.shade700,
+                                ),
+                              ),
+                            ),
+                          if (!stokTakibi)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                "Sınırsız",
+                                style: TextStyle(
+                                    fontSize: 11, color: Colors.grey),
+                              ),
+                            ),
+                        ],
+                      ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
                             icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () => _urunDuzenleDialog(context, urunDoc.id, data["ad"] ?? "", data["fiyat"]),
+                            onPressed: () => _urunDuzenleDialog(
+                                context,
+                                urunDoc.id,
+                                data["ad"] ?? "",
+                                data["fiyat"],
+                                stok,
+                                stokTakibi),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _urunSilOnay(context, urunDoc.id, data["resimUrl"]),
+                            icon:
+                            const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _urunSilOnay(
+                                context, urunDoc.id, data["resimUrl"]),
                           ),
                         ],
                       ),
@@ -155,14 +232,24 @@ class _AdminMenuEkraniState extends State<AdminMenuEkrani> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Ürünü Sil"),
-        content: const Text("Bu ürünü menüden kaldırmak istediğinize emin misiniz?"),
+        content: const Text(
+            "Bu ürünü menüden kaldırmak istediğinize emin misiniz?"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("İptal")),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("İptal")),
           ElevatedButton(
             onPressed: () async {
-              await FirebaseFirestore.instance.collection("menu").doc(id).delete();
+              await FirebaseFirestore.instance
+                  .collection("menu")
+                  .doc(id)
+                  .delete();
               if (resimUrl != null && resimUrl.isNotEmpty) {
-                try { await FirebaseStorage.instance.refFromURL(resimUrl).delete(); } catch (e) {}
+                try {
+                  await FirebaseStorage.instance
+                      .refFromURL(resimUrl)
+                      .delete();
+                } catch (e) {}
               }
               Navigator.pop(context);
             },
@@ -174,131 +261,256 @@ class _AdminMenuEkraniState extends State<AdminMenuEkrani> {
     );
   }
 
-  void _urunDuzenleDialog(BuildContext context, String id, String eskiAd, dynamic eskiFiyat) {
-    TextEditingController adController = TextEditingController(text: eskiAd);
-    TextEditingController fiyatController = TextEditingController(text: eskiFiyat.toString());
+  // DÜZENLEME DİYALOĞU - stok alanları eklendi
+  void _urunDuzenleDialog(BuildContext context, String id, String eskiAd,
+      dynamic eskiFiyat, int eskiStok, bool eskiStokTakibi) {
+    TextEditingController adController =
+    TextEditingController(text: eskiAd);
+    TextEditingController fiyatController =
+    TextEditingController(text: eskiFiyat.toString());
+    TextEditingController stokController =
+    TextEditingController(text: eskiStok.toString());
+    bool stokTakibi = eskiStokTakibi;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Ürünü Güncelle"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: adController, decoration: const InputDecoration(labelText: "Ürün Adı")),
-            TextField(controller: fiyatController, decoration: const InputDecoration(labelText: "Fiyat"), keyboardType: TextInputType.number),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text("Ürünü Güncelle"),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                    controller: adController,
+                    decoration:
+                    const InputDecoration(labelText: "Ürün Adı")),
+                TextField(
+                    controller: fiyatController,
+                    decoration: const InputDecoration(labelText: "Fiyat"),
+                    keyboardType: TextInputType.number),
+                TextField(
+                  controller: stokController,
+                  decoration:
+                  const InputDecoration(labelText: "Ürün Stoğu"),
+                  keyboardType: TextInputType.number,
+                ),
+                SwitchListTile(
+                  title: const Text("Stok Takibi Yapılsın mı?",
+                      style: TextStyle(fontSize: 14)),
+                  value: stokTakibi,
+                  activeColor: Colors.brown,
+                  onChanged: (v) => setState(() => stokTakibi = v),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("İptal")),
+            ElevatedButton(
+              onPressed: () {
+                FirebaseFirestore.instance
+                    .collection("menu")
+                    .doc(id)
+                    .update({
+                  "ad": adController.text,
+                  "fiyat": int.tryParse(fiyatController.text) ?? 0,
+                  "stok": int.tryParse(stokController.text) ?? 0,
+                  "stokTakibiAktif": stokTakibi,
+                });
+                Navigator.pop(context);
+              },
+              child: const Text("Güncelle"),
+            ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("İptal")),
-          ElevatedButton(
-            onPressed: () {
-              FirebaseFirestore.instance.collection("menu").doc(id).update({
-                "ad": adController.text,
-                "fiyat": int.parse(fiyatController.text),
-              });
-              Navigator.pop(context);
-            },
-            child: const Text("Güncelle"),
-          ),
-        ],
       ),
     );
   }
 
+  // YENİ ÜRÜN EKLEME - stok alanları + çoklu tıklama koruması eklendi
   void _yeniUrunEkleSheet(BuildContext context) {
     TextEditingController adController = TextEditingController();
     TextEditingController fiyatController = TextEditingController();
-    bool _kaydediliyor = false;
+    TextEditingController stokController =
+    TextEditingController(text: "0");
+    bool stokTakibi = false;
+    bool kaydediliyor = false;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius:
+          BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => StatefulBuilder(
         builder: (context, setSheetState) => Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 20, right: 20, top: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text("Yeni Ürün Ekle", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              GestureDetector(
-                onTap: () async {
-                  await _resimSec();
-                  setSheetState(() {});
-                },
-                child: Container(
-                  height: 100, width: 100,
-                  margin: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(10)),
-                  child: _secilenDosya == null
-                      ? const Icon(Icons.add_a_photo, size: 40)
-                      : Image.file(_secilenDosya!, fit: BoxFit.cover),
+          padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+              left: 20,
+              right: 20,
+              top: 20),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text("Yeni Ürün Ekle",
+                    style: TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+
+                // Resim seçimi
+                GestureDetector(
+                  onTap: () async {
+                    await _resimSec();
+                    setSheetState(() {});
+                  },
+                  child: Container(
+                    height: 100,
+                    width: 100,
+                    margin: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(10)),
+                    child: _secilenDosya == null
+                        ? const Icon(Icons.add_a_photo, size: 40)
+                        : Image.file(_secilenDosya!, fit: BoxFit.cover),
+                  ),
                 ),
-              ),
-              TextField(controller: adController, decoration: const InputDecoration(labelText: "Ürün Adı")),
-              TextField(controller: fiyatController, decoration: const InputDecoration(labelText: "Fiyat"), keyboardType: TextInputType.number),
 
-              // 2. Dropdown yapısını ekledim
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                value: _secilenKategori,
-                decoration: const InputDecoration(
-                  labelText: "Kategori Seçin",
-                  border: OutlineInputBorder(),
+                TextField(
+                    controller: adController,
+                    decoration:
+                    const InputDecoration(labelText: "Ürün Adı")),
+                TextField(
+                  controller: fiyatController,
+                  decoration: const InputDecoration(labelText: "Fiyat"),
+                  keyboardType: TextInputType.number,
                 ),
-                items: _kategoriler.map((String kategori) {
-                  return DropdownMenuItem<String>(
-                    value: kategori,
-                    child: Text(kategori),
-                  );
-                }).toList(),
-                onChanged: (String? yeniDeger) {
-                  setSheetState(() {
-                    _secilenKategori = yeniDeger!;
-                  });
-                },
-              ),
 
-              const SizedBox(height: 20),
+                // YENİ: Stok alanı
+                TextField(
+                  controller: stokController,
+                  decoration: const InputDecoration(
+                    labelText: "Ürün Stoğu",
+                    hintText: "Kaç porsiyon var?",
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
 
-              // 3. Kaydetme butonunu çoklu tıklamaya karşı korumalı hale getirdim
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.brown),
-                onPressed: _kaydediliyor ? null : () async {
-                  if (adController.text.isNotEmpty && fiyatController.text.isNotEmpty && _secilenDosya != null) {
-                    setSheetState(() => _kaydediliyor = true);
-                    try {
-                      String indirilenUrl = await _resmiYukleVeUrlAl(_secilenDosya!);
+                // YENİ: Stok takibi switch
+                SwitchListTile(
+                  title: const Text("Stok Takibi Yapılsın mı?"),
+                  subtitle: const Text(
+                    "Kapalıysa ürün hiç tükenmez (Su, Çay gibi)",
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  value: stokTakibi,
+                  activeColor: Colors.brown,
+                  onChanged: (v) =>
+                      setSheetState(() => stokTakibi = v),
+                ),
 
-                      await FirebaseFirestore.instance.collection("menu").add({
-                        "ad": adController.text,
-                        "fiyat": int.tryParse(fiyatController.text) ?? 0,
-                        "kategori": _secilenKategori,
-                        "resimUrl": indirilenUrl,
-                        "aktif": true,
-                      });
+                // Kategori seçimi
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: _secilenKategori,
+                  decoration: const InputDecoration(
+                    labelText: "Kategori Seçin",
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _kategoriler.map((String kategori) {
+                    return DropdownMenuItem<String>(
+                      value: kategori,
+                      child: Text(kategori),
+                    );
+                  }).toList(),
+                  onChanged: (String? yeniDeger) {
+                    setSheetState(() {
+                      _secilenKategori = yeniDeger!;
+                    });
+                  },
+                ),
 
-                      setState(() {
-                        _secilenDosya = null;
-                        adController.clear();
-                        fiyatController.clear();
-                      });
+                const SizedBox(height: 20),
 
-                      if (mounted) Navigator.pop(context);
-                    } catch (e) {
-                      setSheetState(() => _kaydediliyor = false);
-                    }
-                  }
-                },
-                child: _kaydediliyor
-                    ? const SizedBox(
-                  height: 20, width: 20,
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                )
-                    : const Text("KAYDET", style: TextStyle(color: Colors.white)),
-              ),
-              const SizedBox(height: 20),
-            ],
+                // Kaydet butonu - çoklu tıklama korumalı
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.brown),
+                    onPressed: kaydediliyor
+                        ? null
+                        : () async {
+                      if (adController.text.isNotEmpty &&
+                          fiyatController.text.isNotEmpty &&
+                          _secilenDosya != null) {
+                        setSheetState(
+                                () => kaydediliyor = true);
+                        try {
+                          String indirilenUrl =
+                          await _resmiYukleVeUrlAl(
+                              _secilenDosya!);
+
+                          await FirebaseFirestore.instance
+                              .collection("menu")
+                              .add({
+                            "ad": adController.text,
+                            "fiyat": int.tryParse(
+                                fiyatController.text) ??
+                                0,
+                            "kategori": _secilenKategori,
+                            "resimUrl": indirilenUrl,
+                            "aktif": true,
+                            "stok": int.tryParse(
+                                stokController.text) ??
+                                0,
+                            "stokTakibiAktif": stokTakibi,
+                          });
+
+                          setState(() {
+                            _secilenDosya = null;
+                          });
+
+                          if (mounted) Navigator.pop(context);
+                        } catch (e) {
+                          setSheetState(
+                                  () => kaydediliyor = false);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context)
+                                .showSnackBar(SnackBar(
+                                content:
+                                Text("Hata: $e"),
+                                backgroundColor:
+                                Colors.red));
+                          }
+                        }
+                      } else {
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(const SnackBar(
+                          content: Text(
+                              "Lütfen tüm alanları doldurun ve resim seçin!"),
+                          backgroundColor: Colors.orange,
+                        ));
+                      }
+                    },
+                    child: kaydediliyor
+                        ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2),
+                    )
+                        : const Text("KAYDET",
+                        style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
