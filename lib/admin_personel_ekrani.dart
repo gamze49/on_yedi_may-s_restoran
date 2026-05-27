@@ -35,7 +35,7 @@ class _PersonelYonetimSayfasiState extends State<PersonelYonetimSayfasi> {
     }
   }
 
-  Future<void> _personelEkle(String ad, String role, String email, String sifre, File? resim) async {
+  Future<void> _personelEkle(String ad, String role, String email, String sifre, File? resim, String guvenlikSorusu, String guvenlikCevabi) async {
     try {
 
       var kontrol = await _db.collection("kullanici")
@@ -68,6 +68,8 @@ class _PersonelYonetimSayfasiState extends State<PersonelYonetimSayfasi> {
         "sifre": sifre,
         "uid": user.user!.uid,
         "resimUrl": resimUrl,
+        "guvenlikSorusu": guvenlikSorusu,
+        "guvenlikCevabi": guvenlikCevabi.trim().toLowerCase(),
         "olusturmaTarihi": FieldValue.serverTimestamp()
       });
 
@@ -194,7 +196,17 @@ class _PersonelYonetimSayfasiState extends State<PersonelYonetimSayfasi> {
 
   void _personelEkleDialog(BuildContext context) {
     String ad = "", role = "garson", email = "", sifre = "";
+    String guvenlikSorusu = "İlk evcil hayvanınızın adı neydi?";
+    String guvenlikCevabi = "";
     File? secilenResim;
+
+    final List<String> sorular = [
+      "İlk evcil hayvanınızın adı neydi?",
+      "Annenizin kızlık soyadı nedir?",
+      "İlk okul öğretmeninizin adı neydi?",
+      "Doğduğunuz şehir neresidir?",
+      "En sevdiğiniz çocukluk arkadaşınızın adı neydi?",
+    ];
 
     showDialog(
       context: context,
@@ -232,6 +244,36 @@ class _PersonelYonetimSayfasiState extends State<PersonelYonetimSayfasi> {
 
                 TextField(onChanged: (v) => email = v, decoration: const InputDecoration(labelText: "E-posta")),
                 TextField(onChanged: (v) => sifre = v, decoration: const InputDecoration(labelText: "Şifre"), obscureText: true),
+
+                const SizedBox(height: 10),
+                const Divider(),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "Güvenlik Sorusu (Şifre sıfırlama için)",
+                    style: TextStyle(fontSize: 12, color: Colors.brown, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<String>(
+                  value: guvenlikSorusu,
+                  decoration: const InputDecoration(
+                    labelText: "Güvenlik Sorusu",
+                    border: OutlineInputBorder(),
+                  ),
+                  isExpanded: true,
+                  items: sorular.map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 12)))).toList(),
+                  onChanged: (v) => setState(() => guvenlikSorusu = v!),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  onChanged: (v) => guvenlikCevabi = v,
+                  decoration: const InputDecoration(
+                    labelText: "Güvenlik Sorusu Cevabı",
+                    hintText: "Küçük harfle yazılması önerilir",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
               ],
             ),
           ),
@@ -239,7 +281,7 @@ class _PersonelYonetimSayfasiState extends State<PersonelYonetimSayfasi> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text("İptal")),
             ElevatedButton(
               onPressed: () async {
-                await _personelEkle(ad, role, email, sifre, secilenResim);
+                await _personelEkle(ad, role, email, sifre, secilenResim, guvenlikSorusu, guvenlikCevabi);
                 if (mounted) Navigator.pop(context);
               },
               child: const Text("Kaydet"),

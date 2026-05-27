@@ -5,6 +5,7 @@ import 'admin_panel_ekrani.dart';
 import 'garson_ekrani.dart';
 import 'mutfak_ekrani.dart';
 import 'kasa_ekrani.dart';
+import 'sifre_sifirlama_ekrani.dart';
 
 class GirisEkrani extends StatefulWidget {
   const GirisEkrani({super.key});
@@ -152,6 +153,27 @@ class _GirisEkraniState extends State<GirisEkrani> {
                       child: const Text(
                         'Giriş Yap',
                         style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SifreSifirlamaEkrani(),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        'Şifremi Unuttum',
+                        style: TextStyle(
+                          color: Colors.brown,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
                     ),
                   ),
