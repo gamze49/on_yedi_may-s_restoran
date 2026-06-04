@@ -16,11 +16,12 @@ class _SiparisEkraniState extends State<SiparisEkrani> {
   double toplam_tutar = 0;
   bool yukleniyor = false;
 
+  static const Color _anaKahve = Color(0xFF6D4C41);
+  static const Color _koyuKahve = Color(0xFF4E342E);
+
   Future<void> siparisiKaydet() async {
     if (secilen_urunler.isEmpty) return;
-
     setState(() => yukleniyor = true);
-
     try {
       List urunListesi = [];
       secilen_urunler.forEach((key, value) {
@@ -31,7 +32,6 @@ class _SiparisEkraniState extends State<SiparisEkrani> {
         });
       });
 
-      // 1. Siparişi kaydet (mevcut mantık aynen korunuyor)
       await FirebaseFirestore.instance.collection("siparisler").add({
         "masaNo": widget.masaId,
         "garson": widget.garsonAdi,
@@ -49,12 +49,10 @@ class _SiparisEkraniState extends State<SiparisEkrani> {
           .doc(widget.masaId)
           .update({"durum": "SiparisAlindi"});
 
-      // 2. YENİ: Stok takibi açık ürünlerin stoğunu düş
       for (var entry in secilen_urunler.entries) {
         String urunAd = entry.key;
         int satilanAdet = entry.value["adet"];
 
-        // Ürünü ad'a göre Firestore'dan bul
         var urunSonuc = await FirebaseFirestore.instance
             .collection("menu")
             .where("ad", isEqualTo: urunAd)
@@ -66,14 +64,12 @@ class _SiparisEkraniState extends State<SiparisEkrani> {
           var urunData = urunDoc.data();
           bool stokTakibi = urunData["stokTakibiAktif"] ?? false;
 
-          // Sadece stok takibi açık ürünlerin stoğunu düş
           if (stokTakibi) {
             int mevcutStok = (urunData["stok"] ?? 0) is int
                 ? (urunData["stok"] ?? 0)
                 : (urunData["stok"] as num).toInt();
             int yeniStok = mevcutStok - satilanAdet;
             if (yeniStok < 0) yeniStok = 0;
-
             await FirebaseFirestore.instance
                 .collection("menu")
                 .doc(urunDoc.id)
@@ -84,15 +80,19 @@ class _SiparisEkraniState extends State<SiparisEkrani> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Sipariş başarıyla kaydedildi!")),
+          SnackBar(
+            content: const Text("Sipariş başarıyla kaydedildi!"),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text("Sipariş kaydedilirken hata oluştu: $e")),
+          SnackBar(content: Text("Sipariş kaydedilirken hata oluştu: $e")),
         );
       }
     } finally {
@@ -114,7 +114,6 @@ class _SiparisEkraniState extends State<SiparisEkrani> {
           secilen_urunler[ad]!["adet"] = yeni_adet;
         }
       }
-
       toplam_tutar = 0;
       secilen_urunler.forEach((key, value) {
         toplam_tutar += value["fiyat"] * value["adet"];
@@ -127,12 +126,27 @@ class _SiparisEkraniState extends State<SiparisEkrani> {
     return DefaultTabController(
       length: 5,
       child: Scaffold(
+        backgroundColor: const Color(0xFFFAF7F2),
         appBar: AppBar(
-          title: Text("Masa ${widget.masaId} Sipariş"),
-          backgroundColor: Colors.brown.shade200,
-          bottom: const TabBar(
+          title: Text(
+            "Masa ${widget.masaId}",
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 17,
+            ),
+          ),
+          backgroundColor: _anaKahve,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
+          bottom: TabBar(
             isScrollable: true,
-            tabs: [
+            indicatorColor: Colors.white,
+            indicatorWeight: 3,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white54,
+            labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            tabs: const [
               Tab(text: "Çorbalar"),
               Tab(text: "Ana Yemek"),
               Tab(text: "Salata"),
@@ -162,19 +176,27 @@ class _SiparisEkraniState extends State<SiparisEkrani> {
           .where("kategori", isEqualTo: kategori)
           .snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.hasError)
-          return const Center(child: Text("Hata oluştu."));
-        if (!snapshot.hasData)
-          return const Center(child: CircularProgressIndicator());
+        if (snapshot.hasError) return const Center(child: Text("Hata oluştu."));
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: _anaKahve));
 
         var urunler = snapshot.data!.docs;
 
         if (urunler.isEmpty) {
-          return const Center(
-              child: Text("Bu kategoride ürün bulunamadı."));
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.no_food_outlined, size: 50, color: Colors.brown.shade200),
+                const SizedBox(height: 10),
+                Text("Bu kategoride ürün bulunamadı.",
+                    style: TextStyle(color: Colors.brown.shade300)),
+              ],
+            ),
+          );
         }
 
         return ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
           itemCount: urunler.length,
           itemBuilder: (context, index) {
             var veri = urunler[index].data() as Map<String, dynamic>;
@@ -182,31 +204,22 @@ class _SiparisEkraniState extends State<SiparisEkrani> {
 
             int fiyat = 0;
             if (veri["fiyat"] != null) {
-              if (veri["fiyat"] is int) {
-                fiyat = veri["fiyat"];
-              } else if (veri["fiyat"] is double) {
-                fiyat = (veri["fiyat"] as double).toInt();
-              } else if (veri["fiyat"] is String) {
-                fiyat = int.tryParse(veri["fiyat"]) ?? 0;
-              }
+              if (veri["fiyat"] is int) fiyat = veri["fiyat"];
+              else if (veri["fiyat"] is double) fiyat = (veri["fiyat"] as double).toInt();
+              else if (veri["fiyat"] is String) fiyat = int.tryParse(veri["fiyat"]) ?? 0;
             }
 
             String resimUrl = veri["resimUrl"] ?? "";
             int adet = secilen_urunler[ad]?["adet"] ?? 0;
 
-            // STOK KONTROLÜ
             bool stokTakibi = veri["stokTakibiAktif"] ?? false;
             int stok = (veri["stok"] ?? 0) is int
                 ? (veri["stok"] ?? 0)
                 : (veri["stok"] as num).toInt();
             bool tukenmisMi = stokTakibi && stok <= 0;
+            bool stokDoluMu = stokTakibi && adet >= stok && stok > 0;
 
-            // Seçilen adet + mevcut stok kontrolü (aşırı sipariş engeli)
-            bool stokDoluMu =
-                stokTakibi && adet >= stok && stok > 0;
-
-            return _urunKarti(
-                ad, fiyat, resimUrl, adet, tukenmisMi, stokDoluMu);
+            return _urunKarti(ad, fiyat, resimUrl, adet, tukenmisMi, stokDoluMu);
           },
         );
       },
@@ -215,62 +228,71 @@ class _SiparisEkraniState extends State<SiparisEkrani> {
 
   Widget _urunKarti(String ad, int fiyat, String resimUrl, int adet,
       bool tukenmisMi, bool stokDoluMu) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: tukenmisMi ? Colors.grey.shade100 : Colors.white,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: tukenmisMi ? Colors.grey.shade100 : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.brown.withOpacity(0.07),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(10.0),
         child: Row(
           children: [
             // Ürün resmi
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                   child: resimUrl.isNotEmpty
                       ? Image.network(
                     resimUrl,
-                    width: 70,
-                    height: 70,
+                    width: 72,
+                    height: 72,
                     fit: BoxFit.cover,
-                    color: tukenmisMi
-                        ? Colors.grey.withOpacity(0.6)
-                        : null,
-                    colorBlendMode: tukenmisMi
-                        ? BlendMode.saturation
-                        : null,
+                    color: tukenmisMi ? Colors.grey.withOpacity(0.6) : null,
+                    colorBlendMode: tukenmisMi ? BlendMode.saturation : null,
                     errorBuilder: (context, error, stackTrace) {
                       return Container(
-                        width: 70,
-                        height: 70,
-                        color: Colors.grey.shade300,
-                        child: const Icon(Icons.fastfood,
-                            color: Colors.grey),
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: Colors.brown.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.fastfood_outlined, color: Colors.brown.shade200),
                       );
                     },
                   )
                       : Container(
-                    width: 70,
-                    height: 70,
-                    color: Colors.grey.shade300,
-                    child: const Icon(Icons.fastfood,
-                        color: Colors.grey),
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: Colors.brown.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.fastfood_outlined, color: Colors.brown.shade200),
                   ),
                 ),
-                // TÜKENDİ YAZISI - resmin üzerinde
                 if (tukenmisMi)
                   Positioned.fill(
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Center(
                         child: Text(
                           "TÜKENDİ",
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 10,
+                            fontSize: 9,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -279,7 +301,7 @@ class _SiparisEkraniState extends State<SiparisEkrani> {
                   ),
               ],
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,36 +309,34 @@ class _SiparisEkraniState extends State<SiparisEkrani> {
                   Text(
                     ad,
                     style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: tukenmisMi ? Colors.grey : Colors.black,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: tukenmisMi ? Colors.grey : _koyuKahve,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    "$fiyat TL",
+                    "$fiyat ₺",
                     style: TextStyle(
-                      color: tukenmisMi
-                          ? Colors.grey
-                          : Colors.green.shade700,
-                      fontWeight: FontWeight.bold,
+                      color: tukenmisMi ? Colors.grey : Colors.green.shade700,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
                     ),
                   ),
-                  // TÜKENDİ uyarı etiketi
                   if (tukenmisMi)
                     Container(
                       margin: const EdgeInsets.only(top: 4),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.red.shade100,
+                        color: Colors.red.shade50,
                         borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.red.shade200),
                       ),
-                      child: const Text(
+                      child: Text(
                         "TÜKENDİ",
                         style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 11,
+                          color: Colors.red.shade600,
+                          fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -324,7 +344,6 @@ class _SiparisEkraniState extends State<SiparisEkrani> {
                 ],
               ),
             ),
-            // Adet butonları - tükenmişse devre dışı
             _adet(ad, fiyat, adet, tukenmisMi, stokDoluMu),
           ],
         ),
@@ -332,70 +351,115 @@ class _SiparisEkraniState extends State<SiparisEkrani> {
     );
   }
 
-  Widget _adet(String ad, int fiyat, int adet, bool tukenmisMi,
-      bool stokDoluMu) {
+  Widget _adet(String ad, int fiyat, int adet, bool tukenmisMi, bool stokDoluMu) {
     return Row(
       children: [
-        IconButton(
-          icon: Icon(
-            Icons.remove,
-            color: adet > 0 ? Colors.brown : Colors.grey.shade300,
-          ),
-          onPressed:
-          (tukenmisMi || adet == 0) ? null : () => urun_guncelle(ad, fiyat, -1),
+        _adetButon(
+          ikon: Icons.remove,
+          etkin: !tukenmisMi && adet > 0,
+          onTap: () => urun_guncelle(ad, fiyat, -1),
         ),
-        Text(
-          "$adet",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: tukenmisMi ? Colors.grey : Colors.black,
+        SizedBox(
+          width: 28,
+          child: Text(
+            "$adet",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+              color: tukenmisMi ? Colors.grey : _koyuKahve,
+            ),
           ),
         ),
-        IconButton(
-          icon: Icon(
-            Icons.add,
-            // Tükenmiş veya stok dolduysa gri
-            color: (tukenmisMi || stokDoluMu)
-                ? Colors.grey.shade300
-                : Colors.brown,
-          ),
-          // Tükenmiş veya stok dolduysa tıklanamaz
-          onPressed: (tukenmisMi || stokDoluMu)
-              ? null
-              : () => urun_guncelle(ad, fiyat, 1),
+        _adetButon(
+          ikon: Icons.add,
+          etkin: !tukenmisMi && !stokDoluMu,
+          onTap: () => urun_guncelle(ad, fiyat, 1),
         ),
       ],
     );
   }
 
+  Widget _adetButon({required IconData ikon, required bool etkin, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: etkin ? onTap : null,
+      child: Container(
+        width: 30,
+        height: 30,
+        decoration: BoxDecoration(
+          color: etkin ? _anaKahve.withOpacity(0.1) : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: etkin ? _anaKahve.withOpacity(0.3) : Colors.grey.shade200,
+          ),
+        ),
+        child: Icon(
+          ikon,
+          size: 16,
+          color: etkin ? _anaKahve : Colors.grey.shade300,
+        ),
+      ),
+    );
+  }
+
   Widget _bottomBar() {
     return Container(
-      height: 100,
-      padding: const EdgeInsets.all(16),
+      height: 90,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.brown.shade200,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(color: Colors.brown.shade100, width: 1),
         ),
-        boxShadow: const [
-          BoxShadow(color: Colors.black26, blurRadius: 10)
+        boxShadow: [
+          BoxShadow(
+            color: Colors.brown.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -4),
+          ),
         ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            "$toplam_tutar TL",
-            style: const TextStyle(
-                fontSize: 20, fontWeight: FontWeight.w600),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Toplam Tutar",
+                style: TextStyle(fontSize: 11, color: Colors.brown.shade400),
+              ),
+              Text(
+                "₺${toplam_tutar.toStringAsFixed(0)}",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: _koyuKahve,
+                ),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: yukleniyor ? null : siparisiKaydet,
-            style:
-            ElevatedButton.styleFrom(backgroundColor: Colors.white),
-            child: const Text("Siparişi Onayla",
-                style: TextStyle(color: Colors.brown)),
+          ElevatedButton.icon(
+            onPressed: (yukleniyor || secilen_urunler.isEmpty) ? null : siparisiKaydet,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _anaKahve,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              elevation: 2,
+            ),
+            icon: yukleniyor
+                ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+            )
+                : const Icon(Icons.check_circle_outline, size: 18),
+            label: const Text(
+              "Siparişi Onayla",
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            ),
           ),
         ],
       ),

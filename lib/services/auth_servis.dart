@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../giris_ekrani.dart';
 
 class AuthServis {
-  // --- Çıkış Yapma ---
+
   static Future<void> isimliCikisYap(BuildContext context, String personelAdi) async {
     bool? eminMi = await showDialog<bool>(
       context: context,
@@ -32,7 +32,7 @@ class AuthServis {
     }
   }
 
-  // --- YENİ MİMARİ: SADECE FIRESTORE KULLANARAK ŞİFRE DOĞRULAMA ---
+
   static Future<void> _firestoreSifreDogrula(String docId, String girilenSifre) async {
     DocumentSnapshot userDoc = await FirebaseFirestore.instance
         .collection("kullanici")
@@ -49,32 +49,29 @@ class AuthServis {
     }
   }
 
-  // --- SADECE FIRESTORE E-POSTA GÜNCELLEME ---
+
   static Future<void> sadeceEpostaGuncelle({
-    required String userUid, // Profil ekranından gelen kullanıcının Firestore Doküman ID'si
+    required String userUid,
     required String mevcutSifre,
     required String yeniEmail,
   }) async {
-    // 1. Önce Firestore'dan mevcut şifreyi kontrol et
+
     await _firestoreSifreDogrula(userUid, mevcutSifre);
 
-    // 2. Şifre doğruysa e-postayı doğrudan Firestore üzerinde güncelle
     await FirebaseFirestore.instance
         .collection("kullanici")
         .doc(userUid)
         .update({"email": yeniEmail});
   }
 
-  // --- SADECE FIRESTORE ŞİFRE GÜNCELLEME ---
   static Future<void> sadeceSifreGuncelle({
-    required String userUid, // Profil ekranından gelen kullanıcının Firestore Doküman ID'si
+    required String userUid,
     required String mevcutSifre,
     required String yeniSifre,
   }) async {
-    // 1. Önce Firestore'dan mevcut şifreyi kontrol et
+
     await _firestoreSifreDogrula(userUid, mevcutSifre);
 
-    // 2. Şifre doğruysa şifreyi doğrudan Firestore üzerinde güncelle
     await FirebaseFirestore.instance
         .collection("kullanici")
         .doc(userUid)

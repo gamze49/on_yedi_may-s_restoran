@@ -11,6 +11,10 @@ class MasaYonetimEkrani extends StatefulWidget {
 class _MasaYonetimEkraniState extends State<MasaYonetimEkrani> {
   String aramaKriteri = "";
 
+  static const Color _anaKahve = Color(0xFF6D4C41);
+  static const Color _koyuKahve = Color(0xFF4E342E);
+  static const Color _kremZemin = Color(0xFFFAF7F2);
+
   void _masaEkle(int yeniMasaNo) async {
     String masaId = yeniMasaNo.toString().padLeft(2, '0');
     await FirebaseFirestore.instance.collection("masalar").doc(masaId).set({
@@ -25,9 +29,11 @@ class _MasaYonetimEkraniState extends State<MasaYonetimEkrani> {
   void _masaSil(BuildContext context, String docId, String durum) async {
     if (durum != "bos") {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Bu masa şu an aktif! Silmek için önce masayı boşaltmalısınız."),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: const Text("Bu masa şu an aktif! Önce masayı boşaltmalısınız."),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
       return;
@@ -35,25 +41,14 @@ class _MasaYonetimEkraniState extends State<MasaYonetimEkrani> {
     await FirebaseFirestore.instance.collection("masalar").doc(docId).delete();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Masa başarıyla silindi."), backgroundColor: Colors.green),
+        SnackBar(
+          content: const Text("Masa başarıyla silindi."),
+          backgroundColor: Colors.green.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
       );
     }
-  }
-
-  Widget appBarIstatistik(String baslik, int adet) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          "$adet",
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        Text(
-          baslik,
-          style: const TextStyle(fontSize: 12, color: Colors.white70),
-        ),
-      ],
-    );
   }
 
   @override
@@ -69,7 +64,6 @@ class _MasaYonetimEkraniState extends State<MasaYonetimEkrani> {
           var tumMasalar = snapshot.data!.docs;
           bosSayisi = tumMasalar.where((m) => (m.data() as Map)["durum"] == "bos").length;
           doluSayisi = tumMasalar.length - bosSayisi;
-
           gosterilecekMasalar = tumMasalar.where((doc) {
             var data = doc.data() as Map<String, dynamic>;
             return data["masaNo"].toString().contains(aramaKriteri);
@@ -77,30 +71,28 @@ class _MasaYonetimEkraniState extends State<MasaYonetimEkrani> {
         }
 
         return Scaffold(
-          backgroundColor: const Color(0xffFAF7F2),
+          backgroundColor: _kremZemin,
           appBar: AppBar(
-            backgroundColor: const Color(0xff6D4C41),
+            backgroundColor: _anaKahve,
             elevation: 0,
             centerTitle: true,
+            iconTheme: const IconThemeData(color: Colors.white),
             title: const Text(
               "Masa Yönetimi",
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
             ),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
-            ),
-
             bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(60),
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 15),
+              preferredSize: const Size.fromHeight(64),
+              child: Container(
+                padding: const EdgeInsets.only(bottom: 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    appBarIstatistik("Boş Masalar", bosSayisi),
-                    const VerticalDivider(color: Colors.white24, thickness: 1, indent: 10, endIndent: 10),
-                    appBarIstatistik("Dolu Masalar", doluSayisi),
+                    _istatistikKutu("Boş", bosSayisi, Colors.green.shade300),
+                    Container(width: 1, height: 36, color: Colors.white24),
+                    _istatistikKutu("Dolu", doluSayisi, Colors.orange.shade300),
+                    Container(width: 1, height: 36, color: Colors.white24),
+                    _istatistikKutu("Toplam", bosSayisi + doluSayisi, Colors.white70),
                   ],
                 ),
               ),
@@ -108,19 +100,24 @@ class _MasaYonetimEkraniState extends State<MasaYonetimEkrani> {
           ),
           body: Column(
             children: [
-
               Padding(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(14),
                 child: TextField(
                   onChanged: (value) => setState(() => aramaKriteri = value),
+                  style: const TextStyle(fontSize: 14),
                   decoration: InputDecoration(
                     hintText: "Masa numarası ara...",
-                    prefixIcon: const Icon(Icons.search),
+                    hintStyle: TextStyle(color: Colors.brown.shade300),
+                    prefixIcon: Icon(Icons.search, color: Colors.brown.shade400, size: 20),
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: Colors.brown.shade100),
                     ),
                   ),
                 ),
@@ -128,57 +125,94 @@ class _MasaYonetimEkraniState extends State<MasaYonetimEkrani> {
 
               Expanded(
                 child: !snapshot.hasData
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const Center(child: CircularProgressIndicator(color: _anaKahve))
                     : gosterilecekMasalar.isEmpty
-                    ? const Center(child: Text("Sonuç bulunamadı."))
+                    ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.table_restaurant_outlined, size: 50, color: Colors.brown.shade200),
+                      const SizedBox(height: 10),
+                      Text("Sonuç bulunamadı.", style: TextStyle(color: Colors.brown.shade300)),
+                    ],
+                  ),
+                )
                     : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                   itemCount: gosterilecekMasalar.length,
                   itemBuilder: (context, i) {
                     var masa = gosterilecekMasalar[i];
                     var masaData = masa.data() as Map<String, dynamic>;
                     String mevcutDurum = masaData["durum"] ?? "bos";
+                    bool bos = mevcutDurum == "bos";
 
                     return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      padding: const EdgeInsets.all(18),
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(25),
-                        boxShadow: const [
-                          BoxShadow(blurRadius: 10, offset: Offset(0, 4), color: Colors.black12)
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: bos ? Colors.green.shade100 : Colors.orange.shade100,
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                            color: Colors.brown.withOpacity(0.07),
+                          )
                         ],
                       ),
                       child: Row(
                         children: [
-                          CircleAvatar(
-                            radius: 25,
-                            backgroundColor: mevcutDurum == "bos" ? Colors.green.shade100 : Colors.red.shade100,
+                          Container(
+                            width: 46,
+                            height: 46,
+                            decoration: BoxDecoration(
+                              color: bos ? Colors.green.shade50 : Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             child: Icon(
-                              Icons.table_restaurant,
-                              color: mevcutDurum == "bos" ? Colors.green : Colors.red,
+                              Icons.table_restaurant_outlined,
+                              color: bos ? Colors.green.shade600 : Colors.orange.shade700,
+                              size: 24,
                             ),
                           ),
-                          const SizedBox(width: 15),
+                          const SizedBox(width: 14),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   "Masa ${masaData['masaNo']}",
-                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                ),
-                                Text(
-                                  mevcutDurum == "bos" ? "Müsait" : "Dolu",
                                   style: TextStyle(
-                                    color: mevcutDurum == "bos" ? Colors.green : Colors.red,
-                                    fontWeight: FontWeight.w500,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: _koyuKahve,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: bos ? Colors.green.shade50 : Colors.orange.shade50,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    bos ? "Müsait" : "Dolu",
+                                    style: TextStyle(
+                                      color: bos ? Colors.green.shade700 : Colors.orange.shade800,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 11,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.delete_forever, color: Colors.red),
+                            icon: Icon(Icons.delete_outline, color: Colors.red.shade400, size: 22),
                             onPressed: () => _masaSil(context, masa.id, mevcutDurum),
                           ),
                         ],
@@ -193,9 +227,10 @@ class _MasaYonetimEkraniState extends State<MasaYonetimEkrani> {
           floatingActionButton: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 30),
             child: FloatingActionButton.extended(
-              backgroundColor: Colors.brown,
+              backgroundColor: _anaKahve,
+              elevation: 3,
               icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text("Yeni Masa Ekle", style: TextStyle(color: Colors.white)),
+              label: const Text("Yeni Masa Ekle", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
               onPressed: () => _yeniMasaDialog(context),
             ),
           ),
@@ -204,40 +239,69 @@ class _MasaYonetimEkraniState extends State<MasaYonetimEkrani> {
     );
   }
 
+  Widget _istatistikKutu(String baslik, int sayi, Color renk) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          "$sayi",
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: renk),
+        ),
+        Text(baslik, style: const TextStyle(fontSize: 11, color: Colors.white60)),
+      ],
+    );
+  }
+
   void _yeniMasaDialog(BuildContext context) {
     final TextEditingController controller = TextEditingController();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
-      builder: (context) => Padding(
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         padding: EdgeInsets.only(
-          left: 30,
-          right: 30,
-          top: 30,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 30,
+          left: 28, right: 28, top: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 28,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Yeni Masa Oluştur", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 18),
+            Text("Yeni Masa Oluştur",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _koyuKahve)),
             const SizedBox(height: 20),
             TextField(
               controller: controller,
               keyboardType: TextInputType.number,
               autofocus: true,
+              style: TextStyle(fontSize: 15, color: _koyuKahve),
               decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.table_restaurant),
+                prefixIcon: Icon(Icons.table_restaurant_outlined, color: _anaKahve),
                 hintText: "Masa numarası girin",
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
+                hintStyle: TextStyle(color: Colors.brown.shade300),
+                filled: true,
+                fillColor: const Color(0xFFFAF7F2),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.brown.shade100)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.brown.shade100)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: _anaKahve, width: 1.5)),
               ),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.brown,
-                minimumSize: const Size(double.infinity, 55),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                backgroundColor: _anaKahve,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 52),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
               ),
               onPressed: () {
                 if (controller.text.isNotEmpty) {
@@ -245,7 +309,7 @@ class _MasaYonetimEkraniState extends State<MasaYonetimEkrani> {
                   Navigator.pop(context);
                 }
               },
-              child: const Text("Kaydet", style: TextStyle(color: Colors.white, fontSize: 16)),
+              child: const Text("Kaydet", style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
             ),
           ],
         ),

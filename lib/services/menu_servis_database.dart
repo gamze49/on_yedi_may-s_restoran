@@ -6,11 +6,9 @@ class MenuService {
   Future<void> menuOlustur() async {
     WriteBatch batch = _db.batch();
 
-    // NOT: Firebase Storage üzerindeki boşluk ve özel karakterleri internet standardına (%20 vb.) dönüştürerek linkleri güvenli hale getirdim.
+
     List menuListesi = [
-      // ==========================================
-      // ANA YEMEKLER
-      // ==========================================
+
       {
         "ad": "Tantuni",
         "fiyat": 180,
@@ -75,9 +73,7 @@ class MenuService {
         "aktif": true,
       },
 
-      // ==========================================
-      // ÇORBALAR
-      // ==========================================
+
       {
         "ad": "Mantar Çorbası",
         "fiyat": 60,
@@ -107,9 +103,7 @@ class MenuService {
         "aktif": true,
       },
 
-      // ==========================================
-      // SALATALAR
-      // ==========================================
+
       {
         "ad": "Mevsim Salata",
         "fiyat": 50,
@@ -132,9 +126,7 @@ class MenuService {
         "aktif": true,
       },
 
-      // ==========================================
-      // TATLILAR
-      // ==========================================
+
       {
         "ad": "Katmer",
         "fiyat": 120,
@@ -171,9 +163,7 @@ class MenuService {
         "aktif": true,
       },
 
-      // ==========================================
-      // İÇECEKLER
-      // ==========================================
+
       {
         "ad": "Ayran",
         "fiyat": 20,

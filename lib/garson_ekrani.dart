@@ -6,122 +6,237 @@ import 'profil_ayarlari_ekrani.dart';
 
 class GarsonEkrani extends StatelessWidget {
   final String personelAdi;
-  final String userUid; // EKLENDİ
+  final String userUid;
   const GarsonEkrani({
     super.key,
     required this.personelAdi,
     required this.userUid,
   });
 
+  static const Color _anaKahve = Color(0xFF6D4C41);
+  static const Color _koyuKahve = Color(0xFF4E342E);
+  static const Color _kremZemin = Color(0xFFFAF7F2);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blueGrey[50],
+      backgroundColor: _kremZemin,
       appBar: AppBar(
         title: const Text(
-          '508 RESTORAN MASALAR',
+          '508 RESTORAN',
           style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
             color: Colors.white,
-            letterSpacing: 1.5,
+            letterSpacing: 2.0,
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.brown.shade200,
+        backgroundColor: _anaKahve,
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.manage_accounts, color: Colors.white),
+            icon: const Icon(Icons.manage_accounts_outlined, color: Colors.white, size: 24),
             tooltip: "Hesap Ayarları",
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ProfilAyarlariEkrani(
-                    userUid: userUid, // DÜZELTME: uid geçiriliyor
-                  ),
+                  builder: (context) => ProfilAyarlariEkrani(userUid: userUid),
                 ),
               );
             },
           ),
           IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
+            icon: const Icon(Icons.logout_outlined, color: Colors.white, size: 24),
             tooltip: "Çıkış Yap",
             onPressed: () => AuthServis.isimliCikisYap(context, personelAdi),
           ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('masalar')
-            .orderBy('masaNo')
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Center(child: Text("Hata oluştu"));
-          }
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Column(
+        children: [
 
-          var masalar = snapshot.data!.docs;
-
-          return GridView.builder(
-            padding: const EdgeInsets.all(10),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.2,
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: _koyuKahve,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
-            itemCount: masalar.length,
-            itemBuilder: (context, index) {
-              var masaVerisi =
-              masalar[index].data() as Map<String, dynamic>;
-              var masaId = masalar[index].id;
-
-              return GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => SiparisEkrani(
-                        masaId: masaId,
-                        garsonAdi: personelAdi,
-                      ),
-                    ),
-                  );
-                },
-                child: Card(
-                  color: masaRengiGetir(masaVerisi['durum'] ?? 'bos'),
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15)),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.table_bar,
-                          size: 40, color: Colors.white),
-                      const SizedBox(height: 10),
-                      Text(
-                        "Masa $masaId",
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        masaKontrol(masaVerisi['durum'] ?? 'bos'),
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 12),
-                      ),
-                    ],
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  child: const Icon(Icons.person_outline, color: Colors.white, size: 18),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Hoş geldin, $personelAdi',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              );
-            },
-          );
-        },
+                const Spacer(),
+                const Text(
+                  'MASALAR',
+                  style: TextStyle(
+                    color: Colors.white60,
+                    fontSize: 11,
+                    letterSpacing: 1.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('masalar')
+                  .orderBy('masaNo')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return const Center(child: Text("Hata oluştu"));
+                }
+                if (!snapshot.hasData) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: _anaKahve),
+                  );
+                }
+
+                var masalar = snapshot.data!.docs;
+
+                return GridView.builder(
+                  padding: const EdgeInsets.all(14),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 1.1,
+                  ),
+                  itemCount: masalar.length,
+                  itemBuilder: (context, index) {
+                    var masaVerisi = masalar[index].data() as Map<String, dynamic>;
+                    var masaId = masalar[index].id;
+                    String durum = masaVerisi['durum'] ?? 'bos';
+
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SiparisEkrani(
+                              masaId: masaId,
+                              garsonAdi: personelAdi,
+                            ),
+                          ),
+                        );
+                      },
+                      child: _masaKarti(masaId, durum),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+
+          // Alt durum göstergesi
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            color: Colors.white,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _durumAnahtari(Colors.brown.shade200, 'Boş'),
+                _durumAnahtari(const Color(0xFFFFB300), 'Sipariş Alındı'),
+                _durumAnahtari(Colors.blue.shade300, 'Hazırlanıyor'),
+                _durumAnahtari(Colors.green.shade400, 'Hazır'),
+              ],
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _masaKarti(String masaId, String durum) {
+    Color kartRengi = masaRengiGetir(durum);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: kartRengi,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: kartRengi.withOpacity(0.4),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.table_bar_outlined,
+            size: 32,
+            color: Colors.white.withOpacity(0.95),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            "Masa $masaId",
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            masaKontrol(durum),
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.8),
+              fontSize: 10,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _durumAnahtari(Color renk, String etiket) {
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: renk,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          etiket,
+          style: TextStyle(
+            fontSize: 10,
+            color: Colors.brown.shade600,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -136,10 +251,10 @@ String masaKontrol(String durum) {
 }
 
 Color masaRengiGetir(String durum) {
-  if (durum == 'bos') return Colors.brown.shade200;
-  if (durum == 'SiparisAlindi') return Colors.yellow[700]!;
-  if (durum == 'odendi') return Colors.brown.shade200;
-  if (durum == 'hazirlaniyor') return Colors.blue[300]!;
-  if (durum == 'hazir') return Colors.green[400]!;
-  return Colors.red[300]!;
+  if (durum == 'bos') return const Color(0xFFA1887F);
+  if (durum == 'SiparisAlindi') return const Color(0xFFFFB300);
+  if (durum == 'odendi') return const Color(0xFFA1887F);
+  if (durum == 'hazirlaniyor') return Colors.blue.shade400;
+  if (durum == 'hazir') return Colors.green.shade500;
+  return Colors.red.shade400;
 }

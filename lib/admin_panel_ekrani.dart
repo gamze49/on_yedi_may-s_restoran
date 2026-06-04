@@ -5,70 +5,71 @@ import 'ciro_ekrani.dart';
 import 'admin_masa_ekle_sil.dart';
 import 'admin_personel_ekrani.dart';
 import 'profil_ayarlari_ekrani.dart';
+import 'haftalik_tuketim_ekrani.dart';
 
 class AdminPanelEkrani extends StatelessWidget {
   final String personelAdi;
-  final String userUid; // EKLENDİ
+  final String userUid;
   const AdminPanelEkrani({
     super.key,
     required this.personelAdi,
     required this.userUid,
   });
 
+  static const Color _anaKahve = Color(0xFF6D4C41);
+  static const Color _koyuKahve = Color(0xFF4E342E);
+  static const Color _kremZemin = Color(0xFFFAF7F2);
+
   @override
   Widget build(BuildContext context) {
-    const Color zeminRengi = Color(0xFFFAF8F5);
-    const Color anaKahve = Color(0xFF8B5A2B);
-    const Color koyuKahve = Color(0xFF5D3A1A);
-
     return Scaffold(
-      backgroundColor: zeminRengi,
+      backgroundColor: _kremZemin,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 220.0,
+            expandedHeight: 210.0,
             floating: false,
             pinned: true,
-            backgroundColor: anaKahve,
+            backgroundColor: _anaKahve,
             elevation: 0,
             actions: [
               IconButton(
-                icon: const Icon(Icons.manage_accounts, color: Colors.white),
+                icon: const Icon(Icons.manage_accounts_outlined, color: Colors.white),
                 tooltip: "Hesap Ayarları",
                 onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ProfilAyarlariEkrani(
-                      userUid: userUid, // DÜZELTME: uid geçiriliyor
-                    ),
+                    builder: (context) => ProfilAyarlariEkrani(userUid: userUid),
                   ),
                 ),
               ),
               IconButton(
                 icon: const Icon(Icons.power_settings_new, color: Colors.white),
                 tooltip: "Çıkış Yap",
-                onPressed: () =>
-                    AuthServis.isimliCikisYap(context, personelAdi),
+                onPressed: () => AuthServis.isimliCikisYap(context, personelAdi),
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
               centerTitle: true,
-              title: const Text(
-                "YÖNETİM MERKEZİ",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 16,
-                  letterSpacing: 1.5,
-                ),
+              titlePadding: const EdgeInsets.only(bottom: 16),
+              title: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Text(
+                    "YÖNETİM MERKEZİ",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                      letterSpacing: 2.0,
+                    ),
+                  ),
+                ],
               ),
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.asset(
-                    "assets/images/restoran.jpg",
-                    fit: BoxFit.cover,
-                  ),
+                  Image.asset("assets/images/restoran.jpg", fit: BoxFit.cover),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -76,7 +77,7 @@ class AdminPanelEkrani extends StatelessWidget {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.black.withOpacity(0.2),
-                          koyuKahve.withOpacity(0.7),
+                          _koyuKahve.withOpacity(0.8),
                         ],
                       ),
                     ),
@@ -88,59 +89,82 @@ class AdminPanelEkrani extends StatelessWidget {
 
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 25, 20, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 5,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          color: anaKahve,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      const Text(
-                        "HIZLI ERİŞİM PANELLERİ",
-                        style: TextStyle(
-                          color: koyuKahve,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ],
+                  Container(
+                    width: 4,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: _anaKahve,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(width: 10),
+                  Text(
+                    "HIZLI ERİŞİM",
+                    style: TextStyle(
+                      color: _koyuKahve,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
 
           SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 15),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                crossAxisSpacing: 15,
-                mainAxisSpacing: 15,
-                childAspectRatio: 1.3,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+                childAspectRatio: 1.1,
               ),
               delegate: SliverChildListSnapshotDelegate([
-                _premiumAdminCard(context, "MENÜ\nYÖNETİMİ",
-                    Icons.restaurant_menu_outlined,
-                    const AdminMenuEkrani(), anaKahve, koyuKahve),
-                _premiumAdminCard(context, "CİRO\nRAPORU",
-                    Icons.auto_graph_outlined,
-                    const CiroEkrani(), anaKahve, koyuKahve),
-                _premiumAdminCard(context, "MASA\nYÖNETİMİ",
-                    Icons.grid_view_rounded,
-                    const MasaYonetimEkrani(), anaKahve, koyuKahve),
-                _premiumAdminCard(context, "PERSONEL\nYÖNETİMİ",
-                    Icons.badge_outlined,
-                    const PersonelYonetimSayfasi(), anaKahve, koyuKahve),
+                _adminKarti(
+                  context,
+                  baslik: "MENÜ\nYÖNETİMİ",
+                  ikon: Icons.restaurant_menu_outlined,
+                  sayfa: const AdminMenuEkrani(),
+                  renk: const Color(0xFF5D4037),
+                  acikRenk: const Color(0xFFF3E5F5),
+                ),
+                _adminKarti(
+                  context,
+                  baslik: "CİRO\nRAPORU",
+                  ikon: Icons.auto_graph_outlined,
+                  sayfa: const CiroEkrani(),
+                  renk: const Color(0xFF2E7D32),
+                  acikRenk: const Color(0xFFE8F5E9),
+                ),
+                _adminKarti(
+                  context,
+                  baslik: "MASA\nYÖNETİMİ",
+                  ikon: Icons.grid_view_rounded,
+                  sayfa: const MasaYonetimEkrani(),
+                  renk: const Color(0xFF1565C0),
+                  acikRenk: const Color(0xFFE3F2FD),
+                ),
+                _adminKarti(
+                  context,
+                  baslik: "PERSONEL\nYÖNETİMİ",
+                  ikon: Icons.badge_outlined,
+                  sayfa: const PersonelYonetimSayfasi(),
+                  renk: const Color(0xFFE65100),
+                  acikRenk: const Color(0xFFFFF3E0),
+                ),
+                _adminKarti(
+                  context,
+                  baslik: "HAFTALİK\nTÜKETİM",
+                  ikon: Icons.bar_chart_outlined,
+                  sayfa: const HaftalikTuketimEkrani(),
+                  renk: const Color(0xFF00695C),
+                  acikRenk: const Color(0xFFE0F2F1),
+                ),
               ]),
             ),
           ),
@@ -151,25 +175,27 @@ class AdminPanelEkrani extends StatelessWidget {
     );
   }
 
-  Widget _premiumAdminCard(BuildContext context, String baslik, IconData ikon,
-      Widget? sayfa, Color anaKahve, Color koyuKahve) {
+  Widget _adminKarti(
+      BuildContext context, {
+        required String baslik,
+        required IconData ikon,
+        required Widget sayfa,
+        required Color renk,
+        required Color acikRenk,
+      }) {
     return GestureDetector(
-      onTap: () {
-        if (sayfa != null) {
-          Navigator.push(
-              context, MaterialPageRoute(builder: (context) => sayfa));
-        }
-      },
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => sayfa)),
       child: Container(
-        padding: const EdgeInsets.all(15),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-                color: koyuKahve.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4)),
+              color: renk.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
+            ),
           ],
         ),
         child: Column(
@@ -177,19 +203,33 @@ class AdminPanelEkrani extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                  color: anaKahve.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10)),
-              child: Icon(ikon, color: anaKahve, size: 24),
+                color: acikRenk,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(ikon, color: renk, size: 24),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Text(
               baslik,
               style: TextStyle(
-                  color: koyuKahve,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900),
+                color: _koyuKahve,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                height: 1.3,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Text(
+                  "Aç",
+                  style: TextStyle(color: renk, fontSize: 11, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(width: 3),
+                Icon(Icons.arrow_forward_ios_rounded, size: 10, color: renk),
+              ],
             ),
           ],
         ),
